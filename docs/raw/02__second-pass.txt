@@ -1,0 +1,767 @@
+title: Second Pass Notes
+date: 2026-04-13
+author: Lion Kimbro
+coauthor: Wing-Cat (Chat-GPT), Claude Code
+purpose: Develop initial concepts, Develop a structure
+
+
+== Introduction ==
+date: 2026-04-14
+
+  SoftSpec is a schema language for JSON that prioritizes description
+  over validation. Where most schema systems require a complete and
+  precise definition of structure, SoftSpec allows you to say as much
+  or as little as you actually know.
+
+  The motivation is practical. Data structures often emerge over time
+  -- through exploration, collaboration, or gradual refinement. A
+  schema language that demands full precision from the start becomes
+  an obstacle rather than a tool. SoftSpec is designed for the
+  opposite workflow: start vague, add detail as it becomes clear, and
+  never be penalized for what you haven't specified yet.
+
+  SoftSpec schemas are intended to be read and written by humans,
+  processed by tools, and reasoned about by LLMs. A value like
+  "x,y coordinates, not sure if tuples or dictionaries" is a valid
+  type expression -- interpretive rather than formal, but meaningful
+  and preserved. Tools operate on what they recognize; everything
+  else passes through unchanged.
+
+  This document defines the core concepts and structures of SoftSpec:
+  the wrapper format, the type system, object and array schemas,
+  constraints, vocabularies, and the tooling model these structures
+  are designed to support.
+
+
+== Table of Contents ==
+date: 2026-04-14
+
+  * Introduction
+  * Table of Contents
+  * Principles
+  * SoftSpec Wrapper
+  * Types Section Example
+  * Schema: Type Definitions
+  * Expressing Constraints
+  * Schema: Objects
+  * Mapped Structures
+  * Schema: Arrays
+  * Vocabulary
+  * Tooling Possibilities
+
+
+== Principles ==
+date: 2026-04-14
+
+  SoftSpec is built on a small number of core principles:
+
+  * Flexibility comes first.
+    Schemas may be partial, evolving, imprecise, or interpretive.
+    Unknowns are allowed and preserved.
+
+  * Description over validation.
+    The goal is to express what is known, not to define what is valid.
+
+  * Structure enables assistance.
+    The more structure you provide, the more tools can understand and help.
+
+
+== SoftSpec Schemas Live Within JSON Documents ==
+date: 2026-04-14
+
+  SoftSpec schemas are expressed as JSON and are designed to be
+  embedded within larger JSON documents.
+
+  In this model, the document itself is structured data. A SoftSpec
+  is not inserted into a Markdown file or prose document; rather,
+  it exists as part of a JSON environment that may also contain
+  narrative text, examples, or other structured content.
+
+  This differs from the more common pattern of separating
+  documentation (e.g. Markdown) from machine-readable schemas.
+  In SoftSpec, the specification and its surrounding context are
+  represented within the same data structure.
+
+  This allows tools to operate directly on the document without
+  translation, while still supporting human-readable explanation
+  alongside the schema.
+
+  To make the presence of a SoftSpec discoverable, it may be
+  packaged under a key "softspec", ideally at the top level of the
+  JSON document.
+
+{
+  "softspec": {
+    "types": {
+      "<type-name>": <type-definition>,
+      ...
+    },
+    "schemas": {
+      "<schema-name>": <schema-definition>,
+      ...
+    }
+  }
+}
+
+
+== Schemas and Types ==
+date: 2026-04-14
+
+  SoftSpec uses a single definition structure to describe data.
+
+  This structure is used throughout the system, including both
+  entries in the "types" section and entries in the "schemas"
+  section.
+
+  In other words, types and schemas are expressed using the same
+  underlying form. The distinction between them is primarily one
+  of role.
+
+  The "types" section defines named, frequently reused definitions.
+  These are typically small, composable building blocks.
+
+  The "schemas" section defines named structures intended for
+  direct use. These often represent complete or externally
+  meaningful forms.
+
+  In addition to the core definition structure, schema entries may
+  include descriptive fields such as titles, notes, and rules.
+  These provide context, identity, and guidance, but do not change
+  the underlying type structure.
+
+  Both ultimately rely on the same definition language described
+  in this document.
+
+
+== Schemas Are Descriptions of Types ==
+date: 2026-04-14
+
+  At its core, a SoftSpec schema is a description of types.
+
+  It describes what values may appear, what they mean, and how
+  they are used.
+
+  Types may be nested within one another. A schema may describe
+  a value directly, or it may describe a structure composed of
+  other types.
+
+  These descriptions may be shallow or deeply detailed. They may
+  be fully specified, or partially described in natural language.
+
+  Types may also refer to other types by name, forming a graph of
+  reusable definitions.
+
+  Ultimately, a SoftSpec document is a description of types and
+  their relationships.
+
+
+== Schema Definition Structure ==
+date: 2026-04-14
+
+  As described above, the "schemas" section defines named structures,
+  with descriptive fields such as titles, notes, and rules.
+
+  A <schema-definition> has the following structure:
+
+{
+  "title": "...",            // optional title
+  "id": "...",               // optional formal identifier (e.g., tag URI)
+  "description": "...",      // optional concise description
+  "introduction": "...",     // optional longer narrative (if needed)
+
+  "notes": [ ... ],          // optional informal commentary
+  "rules": [ ... ],          // optional behavioral / interpretive rules
+
+  "structure":
+    <type definition>        // the actual structural definition
+}
+
+
+== Variable Levels of Detail ==
+date: 2026-04-14
+
+  A SoftSpec definition may be expressed in several forms, ranging
+  from simple to detailed.
+
+  At the simplest level, a definition may be a string:
+
+    "string"
+    "a short phrase"
+
+  These forms are interpretive and may describe either a known type
+  or a human-understood concept.
+
+  Definitions may also take on more structured forms, expressing
+  recognizable shapes such as objects, arrays, or mappings.
+
+  For example:
+
+    {"type": "string"}
+    {"type": "array", "items": "string"}
+
+  These structured forms allow tools to understand and operate on
+  the data more precisely.
+
+  In practice, definitions often combine both approaches. Some parts
+  may be fully structured, while others remain interpretive:
+
+    {
+      "type": "object",
+      "keys": {
+        "name": "short label",
+        "coordinates": "x,y coordinates, not sure if tuples or dictionaries",
+        "tags": {
+          "type": "array",
+          "items": "string"
+        }
+      }
+    }
+
+  This flexibility is intentional. A schema may be precise where
+  needed, and approximate where details are still emerging.
+
+
+== Specific Forms ==
+date: 2026-04-14
+
+  The remainder of this document describes how common data structures
+  are expressed in SoftSpec.
+
+
+== Expressing: References ==
+date: 2026-04-14
+
+  Defined types may be referenced by name:
+
+  Fore example:
+  
+    "entity-id"
+
+  To be more explicit:
+  
+    {"ref": "entity-id"}
+
+  This allows commonly used structures to be defined once and reused
+  throughout the document.
+
+
+== Expressing: Detail ==
+date: 2026-04-14
+
+  A detailed description of a type can be expressed using an object.
+  This object is itself a SoftSpec definition.
+
+  This form allows you to specify structure, meaning, and context of a
+  value in a gradual and flexible way.
+
+  All fields are optional. You may provide as much or as little detail
+  as is useful.
+
+- "type" -----------------------------------------
+
+    The primary descriptor of the value.
+
+    This may be a basic structure (such as "string", "number",
+    "array", or "object"), or a named type defined elsewhere in the
+    document.
+
+    The "type" field may also be expressed as an array, indicating
+    that multiple forms are allowed. For example:
+
+      ["int", "str"]
+
+    indicates that the value may be either an integer or a string.
+
+    The "type" field may also be interpretive, describing the expected
+    form in natural language when a precise structure is not yet known.
+
+  EXAMPLES:
+
+    Specifying a string value:
+
+{
+  "type": "string",
+  "semantic_type": "name",
+  "description": "The user's name."
+}
+
+    Specifying a union type; either a GUID or a tag-uri could go here:
+
+{
+  "type": ["guid", "tag-uri"],
+  "logical_type": "string",
+  "description": "A valid identifier for the entity."
+}
+
+
+- "logical_type" ---------------------------------
+
+    The underlying JSON type.
+
+    This is useful when the "type" field is descriptive or refers to
+    a named concept, and the actual JSON representation needs to be
+    made explicit.
+
+{
+  "type": "the user's full name",
+  "logical_type": "string",
+}
+
+
+  A NOTE ABOUT JSON NUMBERS:
+
+    JSON represents integers, floating-point values, and exponential
+    forms within a single "number" type.
+
+    In practice, many systems distinguish between these forms. In
+    SoftSpec, it is appropriate to use more specific types such as
+    "int", "float", or "decimal" when that distinction matters.
+
+    The "logical_type" may be used to indicate the underlying JSON
+    representation (e.g. "number"), but this is optional.
+
+    In general, prefer the type that reflects how the value is used in
+    your programming context.
+
+
+- "semantic_type" --------------------------------
+
+    Describes the meaning of the value within its type.
+
+    This provides additional context beyond structure. For example,
+    a string might have the semantic type "name", "label", or "url".
+
+    This field is especially useful when the same structural type
+    appears in multiple roles.
+
+    For example, a URL is a semantic type of a string:
+
+{
+  "type": "string",
+  "semantic_type": "url",
+  "description": "A link to the external resource."
+}
+
+
+- "description" ----------------------------------
+
+    A plain-language explanation of the value.
+
+    This is intended to communicate intent and usage, and may range
+    from a short phrase to a longer paragraph.
+
+    For example, an age:
+
+{
+  "type": "number",
+  "semantic_type": "age",
+  "description": "Age of the user in years."
+}
+
+
+- "examples" -------------------------------------
+
+    A list of example values.
+
+    Examples provide grounding and help clarify ambiguous or
+    interpretive definitions.
+
+    For example, the example of tags:
+
+{
+  "type": "string",
+  "semantic_type": "tag",
+  "examples": ["science", "history", "personal"]
+}
+
+
+- "nullable" -------------------------------------
+
+    Indicates whether the value may be null.
+
+    This allows nullability to be expressed independently of the
+    type itself.
+
+{
+  "type": "string",
+  "semantic_type": "middle-name",
+  "nullable": true,
+  "description": "Optional middle name of the user."
+}
+
+
+- "notes" ----------------------------------------
+
+    Additional commentary or guidance.
+
+    This may be a string or an array of strings, and is intended
+    for informal or explanatory content.
+
+    An example of notes about labels:
+
+{
+  "type": "string",
+  "semantic_type": "label",
+  "notes": [
+    "Used for display purposes.",
+    "Not guaranteed to be unique."
+  ]
+}
+
+
+- "constraints" ----------------------------------
+
+    Describes expectations or limitations on acceptable values.
+
+    This is documented in its own section of this document:
+    "Expressing Constraints".
+
+    An example:
+
+{
+  "type": "string",
+  "semantic_type": "username",
+  "constraints": {
+    "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+    "min_length": 3,
+    "max_length": 20
+  }
+}
+
+--------------------------------------------------
+
+  Additional fields may be invented as needed. Unrecognized fields
+  should be preserved and ignored by tools that do not understand
+  them.
+
+
+== Expressing: Constraints ==
+date: 2026-04-14
+
+  The "constraints" field describes expectations or limitations on
+  acceptable values. It may be expressed in two forms:
+
+  1. As a descriptive string:
+
+    "constraints": "must be a short identifier, using letters, numbers, underscore, or dash"
+
+  2. As a structured object:
+
+    "constraints": {
+      "pattern": "[a-zA-Z][a-zA-Z0-9_-]*",
+      "min_length": 1,
+      "max_length": 32,
+      "allowed_values": ["file", "url"],
+      "format": "uri"
+    }
+
+  Common constraint keys:
+
+    * "pattern"        — a regular expression describing acceptable values
+    * "min_length"     — minimum length for string values
+    * "max_length"     — maximum length for string values
+    * "allowed_values" — an explicit set of permitted values
+    * "format"         — a general format hint (e.g., "uri", "email", "date")
+
+  Additional constraint keys may be used as needed. The set of
+  recognized constraint types is open.
+
+
+== Expressing: Objects ==
+date: 2026-04-14
+
+  Starting from an example:
+
+{
+  "type": "object",
+  "description": "Example object",
+
+  "keys": {
+    "id": {
+      "type": "entity_id",
+      "required": true
+    },
+
+    "age": {
+      "type": "integer",
+      "semantic_type": "user_age",
+      "required": false,
+      "description": "Age of the user in years",
+      "examples": [25, 42]
+    }
+  },
+
+  "additional_keys": true
+}
+
+  The fields allowed on an object:
+
+  "type": "object"          (fixed)
+  "description": "..."      (optional)
+  "keys": { ... }           (optional; defines named fields)
+  "additional_keys": ...    (optional; bool or type -- see below)
+
+  Each entry in "keys" may include:
+
+    "type"          (optional; string or array for union types)
+    "required"      (optional; bool or string -- may describe conditions)
+    "logical_type"  (optional; e.g. "int")
+    "semantic_type" (optional; e.g. "age")
+    "description"   (optional; plain language intent)
+    "examples"      (optional; array of grounding values)
+    "nullable"      (optional; bool -- value may be null)
+    "notes"         (optional; string or array of strings)
+    ...             (additional keys are permitted)
+
+  Objects support three degrees of openness:
+
+  * Partial specification -- define only what you know;
+    {"type": "string"} is a complete and valid entry
+
+  * Mixed precision -- some fields tightly specified, others loosely:
+    {"type": ["string", "integer"], "description": "loosely defined value"}
+
+  * Open keys -- "additional_keys": true permits any additional keys;
+    "additional_keys": {"type": "string"} constrains their value type
+
+
+== Expressing: Mapped Structures ==
+date: 2026-04-14
+
+  Objects come in three forms:
+
+  1. Tightly defined -- a fixed set of named keys via "keys"
+
+  2. Loose -- "additional_keys": true; undefined keys are permitted
+
+  3. Patterned map -- keys follow a type or pattern,
+                      values are uniformly structured
+
+  A patterned map looks like this:
+
+  {
+    "<entity-id>": [...],
+    "<entity-id>": [...]
+  }
+
+  This is distinct from "additional_keys" -- it is a mapping from
+  key-of-type-X to value-of-type-Y. To describe one:
+
+  {
+    "type": "object",
+
+    "key_type": "entity_id",
+    "value_type": { ... }
+  }
+
+  Summary:
+
+    Fixed structure:  "keys": { ... }
+    Loose extension:  "additional_keys": true
+    Mapped structure: "key_type": "...", "value_type": { ... }
+
+
+== Expressing: Arrays ==
+date: 2026-04-14
+
+  Arrays are described using "type": "array". The structure of
+  elements is described using the "items" field.
+
+  Example:
+
+    {
+      "type": "array",
+      "ordering": "alphabetical",
+      "items": {
+        "type": "string",
+        "semantic_type": "tag"
+      }
+    }
+
+  The "items" field is itself a SoftSpec definition, and may be
+  expressed at any level of detail:
+
+    "items": "string"
+
+    "items": {
+      "type": "object",
+      "keys": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    }
+
+  Arrays are assumed homogeneous by default, though this is not
+  strictly enforced. If the item structure is unknown or flexible,
+  "items" may be omitted or expressed informally:
+
+    {
+      "type": "array",
+      "description": "A list of coordinate values"
+    }
+
+
+== Expressing: Vocabulary ==
+date: 2026-04-14
+
+  The "vocabulary" field provides a suggested mapping from values
+  to meanings. It is descriptive and optional -- it does not
+  restrict the set of valid values, but encourages consistency
+  and shared understanding across systems.
+
+  Example (string values):
+
+    {
+      "type": "string",
+      "semantic_type": "event-code",
+      "vocabulary": {
+        "CREATED":    "The entity was created at this time.",
+        "UPDATED":    "The entity's data was meaningfully updated.",
+        "DEPRECATED": "Use of this entity is discouraged after this time."
+      }
+    }
+
+  Example (numeric values):
+
+    {
+      "type": "number",
+      "semantic_type": "process-exit-code",
+      "vocabulary": {
+        0: "Successful completion.",
+        1: "General error.",
+        2: "Misuse of shell builtins."
+      }
+    }
+
+  The optional "vocabulary_mode" field indicates whether the
+  vocabulary is intended to be exhaustive:
+
+    * "open" (default) — values not listed are permitted and expected
+    * "closed"         — the listed values are intended to be complete
+
+  Even when "closed" is specified, this remains a descriptive
+  convention. Tools MAY choose to enforce it, but are not required
+  to do so.
+
+  Tools MAY use vocabulary definitions to:
+    * provide human-readable labels
+    * assist in interpretation
+    * suggest common values during data entry
+
+
+== Types Section Example ==
+date: 2026-04-13
+
+{
+  "types": {
+    "uuid": {
+      "type": "string",
+      "semantic_type": "uuid",
+      "description": "A globally unique identifier for an entity",
+      "examples": [
+        "550e8400-e29b-41d4-a716-446655440000"
+      ],
+      "notes": ["typically a v4 (random) UUID, but conceivably a v5 (systematic) UUID"],
+      "rfc": "RFC-9562"
+    },
+
+    "tag_uri": {
+      "type": "string",
+      "semantic_type": "tag_uri",
+      "description": "A Tag URI identifier",
+      "examples": [
+        "tag:lionkimbro@gmail.com,2026-04-13:soft-schema"
+      ],
+      "rfc": "RFC-4151"
+    },
+
+    "entity_id": {
+      "type": ["uuid", "tag_uri"],
+      "notes": ["It can be either a UUID or a Tag URI,
+                 but it must be one, and it must never change
+                 after initial assignment."]
+    }
+  }
+}
+
+
+== Tooling: Be Permissive ==
+date: 2026-04-14
+
+  Tools that read or process SoftSpec documents should be
+  permissive in what they accept.
+
+  Variations in naming are common and expected. For example,
+  "str" and "string", or "int" and "integer", should be
+  interpreted as equivalent where the meaning is clear.
+
+  The goal of SoftSpec is to support communication and
+  understanding, not to enforce rigid syntax.
+
+  Tools should prioritize user intent over strict conformity.
+  Minor differences in wording or representation should not
+  cause errors or rejection.
+
+  When meaning is clear, tools should adapt. When meaning is
+  unclear, tools may request clarification, but should not
+  fail unnecessarily.
+
+  In general, tools should make the user's work easier,
+  not more fragile.
+
+
+== Tooling: Dealing with the Unknown ==
+date: 2026-04-14
+
+  If a "type" value is not recognized as a named type or standard
+  logical type, it SHOULD be treated as free-form and interpretive.
+
+  Tools should treat such values as opaque and non-actionable, but
+  may flag them for human review.
+
+    If structured: tools can act.
+    If interpretive: tools step back.
+
+  Conformity is not required. The more structure you provide, the
+  more tools can assist. Non-conformant content is preserved, not
+  rejected.
+
+
+== Tooling Possibilities ==
+date: 2026-04-14
+author: Wing-Cat (Chat-GPT), from Lion's inspiration
+
+  This specification is designed to support tooling that assists
+  in the gradual refinement of structure, rather than requiring
+  it to be fully defined from the outset.
+
+  One envisioned tool is a structured editor -- like a JSON editor,
+  but able to interpret partially defined or free-form entries. A
+  user could type "x,y coordinates here as a list of tuples or
+  dictionaries, not sure which", and the tool could consult an LLM
+  to propose several structured interpretations. The user picks one
+  as a starting point and refines from there.
+
+  This supports a workflow of:
+    - initial expression (possibly vague or incomplete)
+    - assisted interpretation
+    - optional commitment to structure
+
+  Importantly, this process is never required. Interpretive
+  descriptions remain valid indefinitely, and tools MUST NOT
+  require them to be resolved into structured forms.
+
+  Another capability is named type extraction. When a structure
+  appears repeatedly, a tool may offer to "make this a named type"
+  -- promoting it into the "types" section and replacing inline
+  definitions with references. A shared type vocabulary can emerge
+  naturally over time, rather than being predefined.
+
+  Tools may also support partial structuring, keeping an
+  interpretive description alongside a structured candidate, so
+  users can compare or defer decisions without losing original
+  intent.
+
+  In all cases, tooling should respect the core principle: assist,
+  suggest, and organize -- but never enforce. The goal is to
+  support human and LLM reasoning, not to constrain it.
