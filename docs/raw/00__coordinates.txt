@@ -1,0 +1,19 @@
+title: Key Coordinates for the Soft Schema Project
+date: 2026-04-13
+
+
+== Project Identifiers ==
+date: 2026-04-13
+
+Zoo Project ID: 3fda67e6-71f8-4ab8-8cc5-875ffff234fd
+Tag URI: tag:lionkimbro@gmail.com,2026-04-13:soft-schema
+Zoo-Keep Project GUID (Repo ID): 156cb050-6329-4517-b8f2-466a8eb58de8
+
+
+== Conversations Tracking ==
+date: 2026-04-13
+
+initial conversation that led to the focus on this: https://chatgpt.com/c/69c74905-fbd8-83e8-b50f-4fe1067dec4f
+first actual stab at it: https://chatgpt.com/c/69dd2a48-1ce4-83e8-bcea-c7d248a12b34
+
+

@@ -1,0 +1,589 @@
+title: First Pass Notes
+date: 2026-04-13
+author: Lion Kimbro
+coauthor: Wing-Cat (Chat-GPT)
+purpose: Develop initial concepts, Develop a structure
+
+
+== Preface ==
+date: 2026-04-13
+
+  I'm doing this in text first,
+  rather than JSON, as I normally do,
+  because that would be JSON about JSON,
+  and that'd just be too confusing,
+  far too confusing,
+  for a first pass.
+
+  So, this.
+
+
+== Principles ==
+date: 2026-04-13
+
+* Flexibility is INCREDIBLY important here.
+  - Whatever is not specified, is up for grabs.
+
+* That said, I DO want machine-parsability, machine-assisted
+  composability, and LLM-collaboration to be possible, so there is a
+  degree of flexible formality here.
+
+* No strict validation rules.
+* No required machine enforcement.
+* No complex constraint languages (yet.)
+
+This is descriptive, rather than perscriptive.
+
+We focus on...
+  "What do we know about this?"
+...rather than: "What is valid?"
+
+* Unknowns are allowed
+* Partial knowledge is preserved
+* Ambiguity becomes visible instead of erased
+
+This is a progressive specification language.
+
+You can say:
+* (minimal:) "string" -- structural
+* (named:) "entity_id" -- semantic reuse
+* (union:) ["uuid", "tag_uri"] -- bounded flexibility
+* (structured:) {type, description, ...} -- rich definition
+* (interpretive:) "x,y coordinates..." -- open reasoning
+...and all of these are equally valid citizens.
+
+
+== Language Note ==
+date: 2026-04-13
+
+Python language is used interchangably with JSON language:
+- "list" is used interchangably with JSON "array"
+- "dictionary" is used interchangably with JSON "object"
+
+
+== SoftSpec Wrapper ==
+date: 2026-04-13
+
+  A SoftSpec may be packaged under a dedicated top-level key:
+
+{
+  "softspec": {
+    "types": { ... },
+    "schemas": {
+      "<schema-name>": <schema-definition>,
+      ...
+    }
+  }
+}
+
+
+<schema-definition>:
+
+{
+  "title": "...",            // optional title
+  "id": "...",               // optional formal identifier (e.g., tag URI)
+  "description": "...",      // optional concise description
+  "introduction": "...",     // optional longer narrative (if needed)
+
+  "notes": [ ... ],          // optional informal commentary
+  "rules": [ ... ],          // optional behavioral / interpretive rules
+
+  "schema": {                // ← the actual structural definition
+    "type": "object",        // (whatever the schema is, goes here)
+    "keys": { ... }
+  }
+}
+
+  This wrapper allows tools and readers to clearly identify the
+  presence of a SoftSpec within a document.
+
+  The "types" section defines a shared vocabulary of named types.
+  These types may be referenced by any schema within the SoftSpec.
+
+  The "schemas" section contains one or more named schema
+  definitions. Each schema represents a structure that may be used
+  independently, but all schemas share access to the same "types"
+  definitions.
+
+  This structure reflects the common case where a document defines
+  multiple related structures (for example: entity, aspect, table,
+  etc.) that share a common type system.
+
+  The "schemas" key SHOULD always be used, even if only a single
+  schema is present. In such cases, a conventional name such as
+  "main" may be used.
+
+  The use of the "softspec" wrapper is RECOMMENDED, as it provides a
+  clear and consistent entry point for tooling.
+
+  However, it is not required. Documents that contain "types" and/or
+  schema-like structures at the top level MAY still be interpreted
+  as SoftSpec-compatible by tools.
+
+  As with all aspects of this specification, this structure is
+  descriptive rather than prescriptive. It provides a convention
+  for clarity and interoperability, but does not restrict alternate
+  organization where appropriate.
+
+
+== Types Section Example ==
+date: 2026-04-13
+
+{
+  "types": {
+    "uuid": {
+      "type": "string",
+      "semantic_type": "uuid",
+      "description": "A globally unique identifier for an entity",
+      "examples": [
+        "550e8400-e29b-41d4-a716-446655440000"
+      ],
+      "notes": ["typically a v4 (random) UUID, but conceivably a v5 (systematic) UUID"],
+      "rfc": "RFC-9562"
+    },
+
+    "tag_uri": {
+      "type": "string",
+      "semantic_type": "tag_uri",
+      "description": "A Tag URI identifier",
+      "examples": [
+        "tag:lionkimbro@gmail.com,2026-04-13:soft-schema"
+      ],
+      "rfc": "RFC-4151"
+    },
+
+    "entity_id": {
+      "type": ["uuid", "tag_uri"],
+      "notes": ["It can be either a UUID or a Tag URI,
+                 but it must be one, and it must never change
+                 after initial assignment."]
+    }
+  }
+}
+
+
+== Schema: Type Definitions ==
+date: 2026-04-13
+
+Wherever a type could be specified, you could do it in several ways:
+
+SIMPLEST:
+
+  "string"    -- a string value could go here
+
+You can also ad-lib something:
+
+  "a short phrase"  -- a string value could go here, in the form of a short phrase
+
+
+REFERENCE:
+
+  "entity-id"  -- if "entity-id" is a named type, then you can reference it like this
+
+More formally:
+
+  {"ref": "entity-id"}  -- this says that this is an entity-id,
+                           and that that's defined somewhere else
+
+
+MORE DETAIL:
+
+  You use this when you're more... defining how a type works.
+
+  {
+    "type": (OPTIONAL; conveys the basic quality of the type;
+             ex: "str", "string", "int", "entity-id", ...;
+             Can also be a list of types -- making this a union type)
+    "logical_type": (OPTIONAL; ex: "int")
+    "semantic_type": (OPTIONAL; ex: "age")
+    "description": (OPTIONAL; plain language intent)
+    "examples": (OPTIONAL; grounding anchors in a list)
+    "nullable": (OPTIONAL; bool -- "this thing could be set to null instead of whatever's here")
+    "notes": (OPTIONAL; a string or a list of strings),
+    "constraints": (OPTIONAL; a dictionary of constratins on values -- documented in a separate section)
+    ... (additional keys are permitted)
+  }
+
+
+AN IMPORTANT NOTE:
+
+  Not all type expressions are meant to be parsed.
+  Some are meant to be understood -- by a human, or an artificial intelligence.
+
+  You can absolutely say:
+
+  "type": "x,y coordinates here as a list of tuples or dictionaries, not sure which"
+
+  If a "type" value is not recognized as a named type or standard
+  logical type, it SHOULD be treated as a free-form, interpretive
+  description. Tools should treat unrecognized type values as opaque
+  and non-actionable, but may flag them for human review.
+
+  If structured: tools can act.
+  If interpretive: tools step back.
+  Tools operate only on what they confidently recognize.
+  Conformity is not required, but if you do conform, things get easier.
+  But nothing non-conformant will ever be lost.
+
+
+== Type, Logical Type, and Semantic Type ==
+date: 2026-04-13
+
+  The primary way to describe the structure of a value is through
+  the "type" field.
+
+  Examples:
+    "type": "string"
+    "type": "array"
+    "type": "entity_id"
+
+  In most cases, "type" alone is sufficient.
+
+  The "semantic_type" field may be used to further clarify the
+  meaning of a value within its type.
+
+  Example:
+    "type": "string",
+    "semantic_type": "entity_id"
+
+  In this case, the value is structurally a string, but carries a
+  more specific meaning.
+
+  The "logical_type" field is optional, and is used when it is
+  necessary to explicitly distinguish the underlying structural
+  type from a more descriptive or non-standard "type" value.
+
+  Example:
+    "type": "entity_id",
+    "logical_type": "string"
+
+  This may be useful when:
+    * the "type" value is a free-form or interpretive description
+    * the underlying JSON type needs to be made explicit
+
+  In general:
+    * Use "type" as the primary descriptor
+    * Use "semantic_type" to refine meaning
+    * Use "logical_type" only when clarification is needed
+
+  Not all type expressions are meant to be parsed. Some are meant
+  to be understood by humans or artificial intelligences. Tools
+  should operate on what they confidently recognize, and treat the
+  rest as descriptive guidance.
+
+
+== Expressing Constraints ==
+date: 2026-04-13
+
+  In addition to describing the structure and meaning of values,
+  it is often useful to describe expectations or limitations on
+  what constitutes an acceptable value.
+
+  The "constraints" field may be used for this purpose.
+
+  The "constraints" field may be expressed in two forms:
+
+  1. As a descriptive string:
+
+    "constraints": "must be a short identifier, using letters, numbers, underscore, or dash"
+
+  2. As a structured object:
+
+    "constraints": {
+      "pattern": "[a-zA-Z][a-zA-Z0-9_-]*",
+      "min_length": 1,
+      "max_length": 32,
+      "allowed_values": ["file", "url"],
+      "format": "uri"
+    }
+
+  Common constraint keys include:
+
+    * "pattern" — a regular expression describing acceptable values
+    * "min_length" — minimum length for string values
+    * "max_length" — maximum length for string values
+    * "allowed_values" — an explicit set of permitted values
+    * "format" — a general format hint (e.g., "uri", "email", "date")
+
+  Additional constraint keys may be used as needed. The set of
+  recognized constraint types is open.
+
+
+== Schema: Objects ==
+date: 2026-04-13
+
+Starting from this Example:
+
+{
+  "type": "object",
+  "description": "Example object",
+
+  "keys": {
+    "id": {
+      "type": "entity_id",
+      "required": true
+    },
+
+    "age": {
+      "type": "integer",
+      "semantic_type": "user_age",
+      "required": false,
+      "description": "Age of the user in years",
+      "examples": [25, 42]
+    }
+  },
+
+  "additional_keys": true
+}
+
+
+So the keys we see allowed on an object are:
+  - "type": "object"  (FIXED)
+  - "description": "..."  (OPTIONAL)
+  - "keys": {    (OPTIONAL)
+      "<fixed-key>": {
+        "type":   (OPTIONAL; can be a string "(type-identifier)"
+                   or a list ["(type-identifier)", {type description}, ...])
+        "required": (OPTIONAL; bool or str -- requiredness can be conditional
+                     and described in natural language)
+        "logical_type": (OPTIONAL; ex: "int")
+        "semantic_type": (OPTIONAL; ex: "age")
+        "description": (OPTIONAL; plain language intent)
+        "examples": (OPTIONAL; grounding anchors in a list)
+        "nullable": (OPTIONAL; bool -- "this thing could be set to null")
+        "notes": (OPTIONAL; a string or a list of strings)
+        ... (additional keys are permitted)
+      }, ...
+    }
+  - "additional_keys": bool/other (OPTIONAL)
+
+
+Softness mechanism:
+
+* Partial Specification
+  -- it's perfectly ok to say {"type": "string"} and just stop there;
+     no need to overdefine
+
+* Mixed Precision
+  -- some fields: {"type": "entity_id"}
+     others: {"type": ["string", "integer"], "description": "loosely defined value"}
+
+* Object openness
+  -- "additional_keys": true
+  or:
+  -- "additional_keys": {"type": "string"}
+
+
+== Mapped Structures ==
+date: 2026-04-13
+
+  So far, we have roughly two types of objects:
+
+  1. Tightly defined objects
+    - These objects have a fixed number of defined keys.
+
+  2. Looks objects
+    - These objects have "additional_keys": true;
+      They can have key values that are not pre-defined.
+
+  However, there is a third type of object:
+
+  3. Patterned maps
+
+  These for example might be like:
+
+  {
+    "<entity-id>": [...],
+    "<entity-id>": [...]
+  }
+
+  Keys follow a type or pattern, and values are uniformly structured.
+
+  This is not "additional_keys," this is a mapping from key-of-type-X
+  to value-of-type-Y.
+
+  Type Y might be a union type, but it is a uniform type none-the-less.
+
+  For these types, we use a pattern like such:
+
+  {
+    "type": "object",
+
+    "key_type": "entity_id",
+    "value_type: ...
+  }
+
+
+  So we have:
+
+  Fixed Structure:
+    "keys": {...}
+
+  Loose Extension:
+    "additional_keys": true
+
+  Mapped structure:
+    "key_type": "...",
+    "value_type": { ... }
+
+
+== Schema: Arrays ==
+date: 2026-04-13
+
+  Arrays are described using "type": "array".
+
+  The structure of elements within the array is described using
+  the "items" field.
+
+  Example:
+
+    {
+      "type": "array",
+      "ordering": "alphabetical",
+      "items": {
+        "type": "string",
+        "semantic_type": "tag"
+      }
+    }
+
+  In this example, the array contains string values, each
+  representing a tag.
+
+  The "items" field itself is a SoftSpec definition, and may be
+  expressed with any level of detail, from simple to structured.
+
+  Examples:
+
+    "items": "string"
+
+    "items": {
+      "type": "object",
+      "keys": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    }
+
+  Arrays are assumed to be homogeneous by default, meaning that
+  all items follow the same structure as described by "items".
+
+  However, this is not strictly enforced. As with all aspects of
+  this specification, the description is intended as guidance.
+
+  If the structure of items is unknown or intentionally flexible,
+  "items" may be omitted or expressed informally:
+
+    {
+      "type": "array",
+      "description": "A list of coordinate values"
+    }
+
+  More complex or mixed-type arrays may be described using
+  interpretive or structured forms as needed.
+
+
+== Vocabulary ==
+date: 2026-04-13
+
+  In many cases, values are not restricted to a fixed set, but it is
+  still useful to suggest a shared set of common values and their
+  meanings.
+
+  The "vocabulary" field may be used for this purpose.
+
+  A vocabulary is descriptive and optional. It does not restrict the
+  set of valid values. Instead, it provides a suggested mapping from
+  values to meanings, encouraging consistency and shared
+  understanding across systems.
+
+  The "vocabulary" field is typically used with string or numeric
+  values, but may be applied wherever it is helpful.
+
+  Example (string values):
+
+    {
+      "type": "string",
+      "semantic_type": "event-code",
+      "vocabulary": {
+        "CREATED": "The entity was created at this time.",
+        "UPDATED": "The entity's data was meaningfully updated.",
+        "DEPRECATED": "Use of this entity is discouraged after this time."
+      }
+    }
+
+  Example (numeric values):
+
+    {
+      "type": "number",
+      "semantic_type": "process-exit-code",
+      "vocabulary": {
+        0: "Successful completion.",
+        1: "General error.",
+        2: "Misuse of shell builtins."
+      }
+    }
+
+  The optional "vocabulary_mode" field may be used to indicate whether
+  the vocabulary is intended to be exhaustive.
+
+  Common values:
+
+    * "open" (default) — values not listed are permitted and expected
+    * "closed" — the listed values are intended to be complete
+
+  Even when "closed" is specified, this remains a descriptive
+  convention. Tools MAY choose to enforce it, but are not required to
+  do so.
+  
+  Tools MAY use vocabulary definitions to:
+    * provide human-readable labels
+    * assist in interpretation
+    * suggest common values during data entry
+
+
+== Tooling Possibilities ==
+date: 2026-04-13
+author: Wing-Cat (Chat-GPT), from Lion's inspiration
+
+  This specification is intended to support a range of tooling,
+  particularly tools that assist in the gradual refinement of
+  structure, rather than requiring structure to be fully defined
+  from the outset.
+
+  One envisioned class of tools is a structured editor, similar
+  to a JSON editor, but augmented with the ability to interpret
+  and assist with partially defined or free-form specifications.
+  In such a tool, a user may enter an interpretive type
+  description (for example: "x,y coordinates here as a list of
+  tuples or dictionaries, not sure which"), and the tool may
+  consult an LLM to propose several possible structured
+  interpretations. The user can then select one of these as a
+  starting point, refining or modifying it further as needed.
+
+  This interaction model supports a workflow of:
+    - initial expression (possibly vague or incomplete),
+    - assisted interpretation,
+    - optional commitment to structure.
+
+  Importantly, this process is not mandatory. Interpretive
+  descriptions remain valid indefinitely, and tools MUST NOT
+  require them to be resolved into structured forms.
+
+  Another envisioned capability is the extraction of named types.
+  When a structure or pattern appears repeatedly, a tool may offer
+  the option to "make this a named type", promoting the structure
+  into the "types" section and replacing inline definitions with
+  references. This allows a vocabulary of reusable types to emerge
+  naturally over time, rather than being predefined.
+
+  Tools may also support partial structuring, where an interpretive
+  description is preserved while a structured candidate is
+  introduced alongside it. This allows users to compare, refine,
+  or defer decisions without losing original intent.
+
+  In all cases, tooling should respect the core principle of this
+  specification: that it is descriptive rather than prescriptive.
+  Tools should assist, suggest, and organize, but not enforce.
+  The goal is to support human and LLM reasoning, not to constrain
+  it.
+
