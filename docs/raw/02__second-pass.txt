@@ -3,6 +3,7 @@ date: 2026-04-13
 author: Lion Kimbro
 coauthor: Wing-Cat (Chat-GPT), Claude Code
 purpose: Develop initial concepts, Develop a structure
+status: in-development; superceeds First Pass
 
 
 == Introduction ==

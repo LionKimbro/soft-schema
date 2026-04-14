@@ -3,6 +3,7 @@ date: 2026-04-13
 author: Lion Kimbro
 coauthor: Wing-Cat (Chat-GPT)
 purpose: Develop initial concepts, Develop a structure
+status: obsolete; superceeded by Second Pass
 
 
 == Preface ==
