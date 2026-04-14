@@ -1,0 +1,13 @@
+{
+  "zookeep-project-guid": "156cb050-6329-4517-b8f2-466a8eb58de8",
+  "name": "soft-schema",
+  "repo-type": "python-2026-03",
+  "license": "CC0-1.0",
+  "repository": {
+    "name": "soft-schema",
+    "visibility": "public"
+  },
+  "python-package": {
+    "name": "softschema"
+  }
+}
