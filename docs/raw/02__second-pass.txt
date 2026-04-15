@@ -1,4 +1,5 @@
-title: Second Pass Notes
+documentid: softspec.spec.v2
+title: SoftSpec Specification (v2)
 date: 2026-04-13
 author: Lion Kimbro
 coauthor: Wing-Cat (Chat-GPT), Claude Code
@@ -40,14 +41,22 @@ date: 2026-04-14
   * Introduction
   * Table of Contents
   * Principles
-  * SoftSpec Wrapper
+  * SoftSpec Schemas Live Within JSON Documents
+  * Schemas and Types
+  * Schemas Are Descriptions of Types
+  * Schema Definition Structure
+  * Variable Levels of Detail
+  * Specific Forms
+  * Expressing: References
+  * Expressing: Detail
+  * Expressing: Constraints
+  * Expressing: Objects
+  * Expressing: Mapped Structures
+  * Expressing: Arrays
+  * Expressing: Vocabulary
   * Types Section Example
-  * Schema: Type Definitions
-  * Expressing Constraints
-  * Schema: Objects
-  * Mapped Structures
-  * Schema: Arrays
-  * Vocabulary
+  * Tooling: Be Permissive
+  * Tooling: Dealing with the Unknown
   * Tooling Possibilities
 
 
@@ -234,7 +243,7 @@ date: 2026-04-14
 
   Defined types may be referenced by name:
 
-  Fore example:
+  For example:
   
     "entity-id"
 
@@ -309,20 +318,14 @@ date: 2026-04-14
 }
 
 
-  A NOTE ABOUT JSON NUMBERS:
-
-    JSON represents integers, floating-point values, and exponential
-    forms within a single "number" type.
-
-    In practice, many systems distinguish between these forms. In
-    SoftSpec, it is appropriate to use more specific types such as
-    "int", "float", or "decimal" when that distinction matters.
-
-    The "logical_type" may be used to indicate the underlying JSON
-    representation (e.g. "number"), but this is optional.
-
-    In general, prefer the type that reflects how the value is used in
-    your programming context.
+  Note: JSON represents integers, floats, and exponential forms as a
+  single "number" type. In practice, many systems distinguish between
+  these. It is appropriate to use more specific types such as "int",
+  "float", or "decimal" when that distinction matters. The
+  "logical_type" may then be used to indicate the underlying JSON
+  representation (e.g. "number"), but this is optional. In general,
+  prefer the type that reflects how the value is used in your
+  programming context.
 
 
 - "semantic_type" --------------------------------
@@ -374,6 +377,30 @@ date: 2026-04-14
   "semantic_type": "tag",
   "examples": ["science", "history", "personal"]
 }
+
+
+- "required" -------------------------------------
+
+    Indicates whether the field is required to be present.
+
+    Typically a boolean:
+
+{
+  "type": "string",
+  "semantic_type": "name",
+  "required": true
+}
+
+    May also be expressed as a string describing the conditions
+    under which the field is required:
+
+{
+  "type": "string",
+  "semantic_type": "file-path",
+  "required": "when type is 'file'"
+}
+
+    When omitted, no assumption about requiredness is made.
 
 
 - "nullable" -------------------------------------
@@ -693,22 +720,13 @@ date: 2026-04-14
   permissive in what they accept.
 
   Variations in naming are common and expected. For example,
-  "str" and "string", or "int" and "integer", should be
-  interpreted as equivalent where the meaning is clear.
+  "str" and "string", or "int" and "integer", should be treated
+  as equivalent where the meaning is clear. When meaning is
+  unclear, tools may request clarification, but should not fail
+  unnecessarily.
 
-  The goal of SoftSpec is to support communication and
-  understanding, not to enforce rigid syntax.
-
-  Tools should prioritize user intent over strict conformity.
-  Minor differences in wording or representation should not
-  cause errors or rejection.
-
-  When meaning is clear, tools should adapt. When meaning is
-  unclear, tools may request clarification, but should not
-  fail unnecessarily.
-
-  In general, tools should make the user's work easier,
-  not more fragile.
+  The goal is to support communication and understanding, not
+  to enforce rigid syntax.
 
 
 == Tooling: Dealing with the Unknown ==
