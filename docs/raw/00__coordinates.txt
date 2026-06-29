@@ -15,5 +15,5 @@ date: 2026-04-13
 
 initial conversation that led to the focus on this: https://chatgpt.com/c/69c74905-fbd8-83e8-b50f-4fe1067dec4f
 first actual stab at it: https://chatgpt.com/c/69dd2a48-1ce4-83e8-bcea-c7d248a12b34
-
+creation of v3, including optional data-dictionary conventions, and wherein I used a sane filename for the spec file: https://chatgpt.com/c/6a42daf4-5ef0-83e8-a138-7e218927aeae
 

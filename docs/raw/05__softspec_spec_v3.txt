@@ -1,0 +1,1289 @@
+documentid: softspec.spec.v3
+title: SoftSpec Specification (v3)
+date: 2026-06-29
+author: Lion Kimbro
+coauthor: Wing-Cat (Chat-GPT), Claude Code
+purpose: Define the SoftSpec schema language, including flexible structural description and optional data-dictionary annotations.
+status: in-development; supersedes softspec.spec.v2; incorporates softspec.addendum.data-dictionary.v1 and softspec.addendum.data-dictionary.correction.v1
+
+
+== Introduction ==
+date: 2026-06-29
+
+  SoftSpec is a schema language for JSON that prioritizes description
+  over validation. Where most schema systems require a complete and
+  precise definition of structure, SoftSpec allows you to say as much
+  or as little as you actually know.
+
+  The motivation is practical. Data structures often emerge over time
+  through exploration, collaboration, or gradual refinement. A schema
+  language that demands full precision from the start becomes an
+  obstacle rather than a tool. SoftSpec is designed for the opposite
+  workflow: start vague, add detail as it becomes clear, and never be
+  penalized for what you have not specified yet.
+
+  SoftSpec schemas are intended to be read and written by humans,
+  processed by tools, and reasoned about by LLMs. A value like
+  "x,y coordinates, not sure if tuples or dictionaries" is a valid
+  type expression: interpretive rather than formal, but meaningful
+  and preserved. Tools operate on what they recognize; everything
+  else passes through unchanged.
+
+  This document defines the core concepts and structures of SoftSpec:
+  the wrapper format, the type system, object and array schemas,
+  constraints, vocabularies, optional representational metadata,
+  data-dictionary annotations, and the tooling model these structures
+  are designed to support.
+
+
+== Table of Contents ==
+date: 2026-06-29
+
+  * Introduction
+  * Table of Contents
+  * Principles
+  * SoftSpec Schemas Live Within JSON Documents
+  * Schemas and Types
+  * Schemas Are Descriptions of Types
+  * Schema Definition Structure
+  * Variable Levels of Detail
+  * Specific Forms
+  * Expressing: References
+  * Expressing: Detail
+  * Expressing: Constraints
+  * Expressing: Objects
+  * Expressing: Mapped Structures
+  * Expressing: Arrays
+  * Expressing: Vocabulary
+  * Expressing: Data-Dictionary Annotations
+  * Types Section Example
+  * Tooling: Be Permissive
+  * Tooling: Dealing with the Unknown
+  * Tooling: Data-Dictionary Annotations
+  * Tooling Possibilities
+
+
+== Principles ==
+date: 2026-06-29
+
+  SoftSpec is built on a small number of core principles:
+
+  * Flexibility comes first.
+    Schemas may be partial, evolving, imprecise, or interpretive.
+    Unknowns are allowed and preserved.
+
+  * Description over validation.
+    The goal is to express what is known, not to define what is valid.
+
+  * Structure enables assistance.
+    The more structure you provide, the more tools can understand and help.
+
+  * Operational context has a place.
+    A SoftSpec may describe not only what a value is, but also how that
+    value lives inside a real system. Structural and operational
+    description should remain distinct, but they may appear together.
+
+
+== SoftSpec Schemas Live Within JSON Documents ==
+date: 2026-06-29
+
+  SoftSpec schemas are expressed as JSON and are designed to be
+  embedded within larger JSON documents.
+
+  In this model, the document itself is structured data. A SoftSpec is
+  not inserted into a Markdown file or prose document; rather, it exists
+  as part of a JSON environment that may also contain narrative text,
+  examples, or other structured content.
+
+  This differs from the more common pattern of separating documentation
+  from machine-readable schemas. In SoftSpec, the specification and its
+  surrounding context are represented within the same data structure.
+
+  This allows tools to operate directly on the document without
+  translation, while still supporting human-readable explanation
+  alongside the schema.
+
+  To make the presence of a SoftSpec discoverable, it may be packaged
+  under a key "softspec", ideally at the top level of the JSON document.
+
+{
+  "softspec": {
+    "types": {
+      "<type-name>": "<type-definition>"
+    },
+    "schemas": {
+      "<schema-name>": "<schema-definition>"
+    }
+  }
+}
+
+
+== Schemas and Types ==
+date: 2026-06-29
+
+  SoftSpec uses a single definition structure to describe data.
+
+  This structure is used throughout the system, including both entries
+  in the "types" section and entries in the "schemas" section.
+
+  In other words, types and schemas are expressed using the same
+  underlying form. The distinction between them is primarily one of role.
+
+  The "types" section defines named, frequently reused definitions.
+  These are typically small, composable building blocks.
+
+  The "schemas" section defines named structures intended for direct
+  use. These often represent complete or externally meaningful forms.
+
+  In addition to the core definition structure, schema entries may
+  include descriptive fields such as titles, notes, and rules. These
+  provide context, identity, and guidance, but do not change the
+  underlying type structure.
+
+  Both ultimately rely on the same definition language described in
+  this document.
+
+
+== Schemas Are Descriptions of Types ==
+date: 2026-06-29
+
+  At its core, a SoftSpec schema is a description of types.
+
+  It describes what values may appear, what they mean, and how they are
+  used.
+
+  Types may be nested within one another. A schema may describe a value
+  directly, or it may describe a structure composed of other types.
+
+  These descriptions may be shallow or deeply detailed. They may be
+  fully specified, or partially described in natural language.
+
+  Types may also refer to other types by name, forming a graph of
+  reusable definitions.
+
+  Ultimately, a SoftSpec document is a description of types and their
+  relationships.
+
+
+== Schema Definition Structure ==
+date: 2026-06-29
+
+  As described above, the "schemas" section defines named structures,
+  with descriptive fields such as titles, notes, and rules.
+
+  A schema definition has the following structure:
+
+{
+  "title": "...",
+  "id": "...",
+  "description": "...",
+  "introduction": "...",
+
+  "notes": [],
+  "rules": [],
+
+  "data-dictionary": {
+    "owner": "...",
+    "primary_audience": []
+  },
+
+  "structure": "<type-definition>"
+}
+
+  All fields are optional except where a project convention says
+  otherwise. The "structure" field contains the actual structural
+  definition.
+
+  The "data-dictionary" annotation is optional. It describes the
+  operational role of the schema or data in a system. It is documented
+  later in this specification.
+
+
+== Variable Levels of Detail ==
+date: 2026-06-29
+
+  A SoftSpec definition may be expressed in several forms, ranging from
+  simple to detailed.
+
+  At the simplest level, a definition may be a string:
+
+    "string"
+    "a short phrase"
+
+  These forms are interpretive and may describe either a known type or
+  a human-understood concept.
+
+  Definitions may also take on more structured forms, expressing
+  recognizable shapes such as objects, arrays, or mappings.
+
+  For example:
+
+    {"type": "string"}
+    {"type": "array", "items": "string"}
+
+  These structured forms allow tools to understand and operate on the
+  data more precisely.
+
+  In practice, definitions often combine both approaches. Some parts
+  may be fully structured, while others remain interpretive:
+
+{
+  "type": "object",
+  "keys": {
+    "name": "short label",
+    "coordinates": "x,y coordinates, not sure if tuples or dictionaries",
+    "tags": {
+      "type": "array",
+      "items": "string"
+    }
+  }
+}
+
+  This flexibility is intentional. A schema may be precise where
+  needed, and approximate where details are still emerging.
+
+
+== Specific Forms ==
+date: 2026-06-29
+
+  The remainder of this document describes how common data structures
+  are expressed in SoftSpec.
+
+
+== Expressing: References ==
+date: 2026-06-29
+
+  Defined types may be referenced by name:
+
+    "entity-id"
+
+  To be more explicit:
+
+    {"ref": "entity-id"}
+
+  This allows commonly used structures to be defined once and reused
+  throughout the document.
+
+
+== Expressing: Detail ==
+date: 2026-06-29
+
+  A detailed description of a type can be expressed using an object.
+  This object is itself a SoftSpec definition.
+
+  This form allows you to specify structure, meaning, representation,
+  and context of a value in a gradual and flexible way.
+
+  All fields are optional. You may provide as much or as little detail
+  as is useful.
+
+- "type" -----------------------------------------
+
+    The primary descriptor of the value.
+
+    This may be a basic structure such as "string", "number", "array",
+    or "object", or a named type defined elsewhere in the document.
+
+    The "type" field may also be expressed as an array, indicating
+    that multiple forms are allowed. For example:
+
+      ["int", "str"]
+
+    indicates that the value may be either an integer or a string.
+
+    The "type" field may also be interpretive, describing the expected
+    form in natural language when a precise structure is not yet known.
+
+  EXAMPLES:
+
+{
+  "type": "string",
+  "semantic_type": "name",
+  "description": "The user's name."
+}
+
+{
+  "type": ["guid", "tag-uri"],
+  "logical_type": "string",
+  "description": "A valid identifier for the entity."
+}
+
+
+- "logical_type" ---------------------------------
+
+    The underlying JSON type.
+
+    This is useful when the "type" field is descriptive or refers to a
+    named concept, and the actual JSON representation needs to be made
+    explicit.
+
+{
+  "type": "the user's full name",
+  "logical_type": "string"
+}
+
+    JSON represents integers, floats, and exponential forms as a single
+    "number" type. In practice, many systems distinguish between these.
+    It is appropriate to use more specific types such as "int", "float",
+    or "decimal" when that distinction matters. The "logical_type" may
+    then be used to indicate the underlying JSON representation, such as
+    "number", but this is optional. In general, prefer the type that
+    reflects how the value is used in your programming context.
+
+
+- "semantic_type" --------------------------------
+
+    Describes the meaning of the value within its type.
+
+    This provides additional context beyond structure. For example, a
+    string might have the semantic type "name", "label", or "url".
+
+    This field is especially useful when the same structural type
+    appears in multiple roles.
+
+{
+  "type": "string",
+  "semantic_type": "url",
+  "description": "A link to the external resource."
+}
+
+
+- "description" ----------------------------------
+
+    A plain-language explanation of the value.
+
+    This is intended to communicate intent and usage, and may range
+    from a short phrase to a longer paragraph.
+
+{
+  "type": "number",
+  "semantic_type": "age",
+  "description": "Age of the user in years."
+}
+
+
+- "examples" -------------------------------------
+
+    A list of example values.
+
+    Examples provide grounding and help clarify ambiguous or
+    interpretive definitions.
+
+{
+  "type": "string",
+  "semantic_type": "tag",
+  "examples": ["science", "history", "personal"]
+}
+
+
+- "required" -------------------------------------
+
+    Indicates whether the field is required to be present.
+
+    Typically a boolean:
+
+{
+  "type": "string",
+  "semantic_type": "name",
+  "required": true
+}
+
+    May also be expressed as a string describing the conditions under
+    which the field is required:
+
+{
+  "type": "string",
+  "semantic_type": "file-path",
+  "required": "when type is 'file'"
+}
+
+    When omitted, no assumption about requiredness is made.
+
+
+- "nullable" -------------------------------------
+
+    Indicates whether the value may be null.
+
+    This allows nullability to be expressed independently of the type
+    itself.
+
+{
+  "type": "string",
+  "semantic_type": "middle-name",
+  "nullable": true,
+  "description": "Optional middle name of the user."
+}
+
+
+- "json_clean" -----------------------------------
+
+    Indicates whether the value is cleanly representable as JSON.
+
+    This is a SoftSpec field or SoftSpec extension field because it
+    describes the value's representational character.
+
+    Suggested values:
+
+      * true
+      * false
+      * "mostly"
+      * "mixed"
+
+{
+  "type": "pathlib.Path",
+  "logical_type": "string",
+  "description": "Filesystem path stored as a Path object in memory.",
+  "json_clean": false
+}
+
+    "json_clean" should normally appear directly on the SoftSpec
+    definition, not inside "data-dictionary". It answers the question:
+
+      Can this value be represented cleanly as JSON?
+
+
+- "notes" ----------------------------------------
+
+    Additional commentary or guidance.
+
+    This may be a string or an array of strings, and is intended for
+    informal or explanatory content.
+
+{
+  "type": "string",
+  "semantic_type": "label",
+  "notes": [
+    "Used for display purposes.",
+    "Not guaranteed to be unique."
+  ]
+}
+
+
+- "constraints" ----------------------------------
+
+    Describes expectations or limitations on acceptable values.
+
+    This is documented in its own section of this document:
+    "Expressing: Constraints".
+
+{
+  "type": "string",
+  "semantic_type": "username",
+  "constraints": {
+    "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+    "min_length": 3,
+    "max_length": 20
+  }
+}
+
+
+- "data-dictionary" -----------------------------
+
+    Optional operational documentation about how the value lives in a
+    real system.
+
+    This is documented in its own section of this document:
+    "Expressing: Data-Dictionary Annotations".
+
+    Use ordinary SoftSpec fields for what the value is. Use
+    "data-dictionary" for how the system owns, creates, mutates,
+    clears, exports, debugs, or otherwise treats the value.
+
+--------------------------------------------------
+
+  Additional fields may be invented as needed. Unrecognized fields
+  should be preserved and ignored by tools that do not understand them.
+
+
+== Expressing: Constraints ==
+date: 2026-06-29
+
+  The "constraints" field describes expectations or limitations on
+  acceptable values. It may be expressed in two forms:
+
+  1. As a descriptive string:
+
+{
+  "constraints": "must be a short identifier, using letters, numbers, underscore, or dash"
+}
+
+  2. As a structured object:
+
+{
+  "constraints": {
+    "pattern": "[a-zA-Z][a-zA-Z0-9_-]*",
+    "min_length": 1,
+    "max_length": 32,
+    "allowed_values": ["file", "url"],
+    "format": "uri"
+  }
+}
+
+  Common constraint keys:
+
+    * "pattern"        - a regular expression describing acceptable values
+    * "min_length"     - minimum length for string values
+    * "max_length"     - maximum length for string values
+    * "allowed_values" - an explicit set of permitted values
+    * "format"         - a general format hint, such as "uri", "email", or "date"
+
+  Additional constraint keys may be used as needed. The set of
+  recognized constraint types is open.
+
+
+== Expressing: Objects ==
+date: 2026-06-29
+
+  Starting from an example:
+
+{
+  "type": "object",
+  "description": "Example object",
+
+  "keys": {
+    "id": {
+      "type": "entity_id",
+      "required": true
+    },
+
+    "age": {
+      "type": "integer",
+      "semantic_type": "user_age",
+      "required": false,
+      "description": "Age of the user in years",
+      "examples": [25, 42]
+    }
+  },
+
+  "additional_keys": true
+}
+
+  The fields allowed on an object:
+
+    "type": "object"       fixed
+    "description": "..."   optional
+    "keys": { ... }        optional; defines named fields
+    "additional_keys": ... optional; bool or type
+    "data-dictionary": ... optional operational annotation
+
+  Each entry in "keys" may include:
+
+    "type"                 optional; string or array for union types
+    "required"             optional; bool or string
+    "logical_type"         optional; e.g. "int"
+    "semantic_type"        optional; e.g. "age"
+    "description"          optional; plain language intent
+    "examples"             optional; array of grounding values
+    "nullable"             optional; bool
+    "json_clean"           optional; bool or descriptive string
+    "notes"                optional; string or array of strings
+    "data-dictionary"      optional operational annotation
+    ...                    additional keys are permitted
+
+  Objects support three degrees of openness:
+
+  * Partial specification: define only what you know.
+    {"type": "string"} is a complete and valid entry.
+
+  * Mixed precision: some fields tightly specified, others loosely.
+    {"type": ["string", "integer"], "description": "loosely defined value"}
+
+  * Open keys: "additional_keys": true permits any additional keys.
+    "additional_keys": {"type": "string"} constrains their value type.
+
+
+== Expressing: Mapped Structures ==
+date: 2026-06-29
+
+  Objects come in three forms:
+
+  1. Tightly defined: a fixed set of named keys via "keys".
+
+  2. Loose: "additional_keys": true; undefined keys are permitted.
+
+  3. Patterned map: keys follow a type or pattern, and values are
+     uniformly structured.
+
+  A patterned map looks like this:
+
+{
+  "<entity-id>": [],
+  "<entity-id>": []
+}
+
+  This is distinct from "additional_keys". It is a mapping from
+  key-of-type-X to value-of-type-Y. To describe one:
+
+{
+  "type": "object",
+  "key_type": "entity_id",
+  "value_type": {
+    "type": "array",
+    "items": "string"
+  }
+}
+
+  Summary:
+
+    Fixed structure:  "keys": { ... }
+    Loose extension:  "additional_keys": true
+    Mapped structure: "key_type": "...", "value_type": { ... }
+
+
+== Expressing: Arrays ==
+date: 2026-06-29
+
+  Arrays are described using "type": "array". The structure of elements
+  is described using the "items" field.
+
+{
+  "type": "array",
+  "ordering": "alphabetical",
+  "items": {
+    "type": "string",
+    "semantic_type": "tag"
+  }
+}
+
+  The "items" field is itself a SoftSpec definition, and may be
+  expressed at any level of detail:
+
+    "items": "string"
+
+{
+  "items": {
+    "type": "object",
+    "keys": {
+      "x": { "type": "number" },
+      "y": { "type": "number" }
+    }
+  }
+}
+
+  Arrays are assumed homogeneous by default, though this is not
+  strictly enforced. If the item structure is unknown or flexible,
+  "items" may be omitted or expressed informally:
+
+{
+  "type": "array",
+  "description": "A list of coordinate values"
+}
+
+
+== Expressing: Vocabulary ==
+date: 2026-06-29
+
+  The "vocabulary" field provides a suggested mapping from values to
+  meanings. It is descriptive and optional. It does not restrict the
+  set of valid values, but encourages consistency and shared
+  understanding across systems.
+
+  Example with string values:
+
+{
+  "type": "string",
+  "semantic_type": "event-code",
+  "vocabulary": {
+    "CREATED": "The entity was created at this time.",
+    "UPDATED": "The entity's data was meaningfully updated.",
+    "DEPRECATED": "Use of this entity is discouraged after this time."
+  }
+}
+
+  Example with numeric values:
+
+{
+  "type": "number",
+  "semantic_type": "process-exit-code",
+  "vocabulary": {
+    "0": "Successful completion.",
+    "1": "General error.",
+    "2": "Misuse of shell builtins."
+  }
+}
+
+  The optional "vocabulary_mode" field indicates whether the vocabulary
+  is intended to be exhaustive:
+
+    * "open"   default; values not listed are permitted and expected
+    * "closed" the listed values are intended to be complete
+
+  Even when "closed" is specified, this remains a descriptive
+  convention. Tools may choose to enforce it, but are not required to
+  do so.
+
+  Tools may use vocabulary definitions to:
+
+    * provide human-readable labels
+    * assist in interpretation
+    * suggest common values during data entry
+
+
+== Expressing: Data-Dictionary Annotations ==
+date: 2026-06-29
+
+  SoftSpec describes structure and meaning.
+
+  A data dictionary describes the role of data within a living system.
+
+  These are related but not identical.
+
+  A SoftSpec definition may say:
+
+{
+  "type": "string",
+  "semantic_type": "window-id",
+  "description": "Unique runtime identifier for a live window."
+}
+
+  A data-dictionary annotation may additionally say:
+
+{
+  "data-dictionary": {
+    "owned_by": "app.windows",
+    "created_by": "realize_window()",
+    "cleared_by": "reset_app()",
+    "used_for": "Lookup and route events for a live window.",
+    "lifecycle": "Created when a window is realized; removed when runtime state is reset."
+  }
+}
+
+  The first describes the value as data.
+
+  The second describes the value as part of a system.
+
+  Both forms are useful. SoftSpec allows them to live together without
+  forcing operational documentation into structural fields such as
+  "type", "description", or "constraints".
+
+
+=== Placement ===
+
+  The "data-dictionary" annotation may appear anywhere a SoftSpec
+  definition appears.
+
+  It may be attached to:
+
+    * a named type
+    * a named schema
+    * an object structure
+    * an individual field under "keys"
+    * a mapped structure
+    * an array
+    * a record type
+    * a top-level SoftSpec document
+
+  Field-level example:
+
+{
+  "window_id": {
+    "type": "string",
+    "semantic_type": "window-id",
+    "required": true,
+    "description": "Unique runtime identifier for a live window.",
+    "json_clean": true,
+
+    "data-dictionary": {
+      "owned_by": "app.windows",
+      "created_by": "realize_window()",
+      "cleared_by": "reset_app()",
+      "lifecycle": "Exists while the window record exists."
+    }
+  }
+}
+
+  Schema-level example:
+
+{
+  "schemas": {
+    "app-module-runtime-state": {
+      "title": "app.py Runtime State",
+      "description": "The full runtime data surface owned by src/tkvillage/app.py.",
+
+      "data-dictionary": {
+        "source_module": "src/tkvillage/app.py",
+        "owner": "TkVillage runtime kernel",
+        "reset_policy": "Container identities are preserved across reset_app() by clearing and updating existing containers.",
+        "primary_audience": ["human maintainer", "LLM coding assistant", "debug tooling"]
+      },
+
+      "structure": {
+        "type": "object",
+        "keys": {}
+      }
+    }
+  }
+}
+
+
+=== Naming ===
+
+  The annotation key should be named "data-dictionary".
+
+  SoftSpec documents should avoid using a bare key named "dictionary"
+  for this feature.
+
+  The word "dictionary" is overloaded. In JSON and programming
+  documentation, it may mean:
+
+    * a JSON object
+    * a Python dict
+    * a map-like data structure
+    * a vocabulary or glossary
+    * a documentation artifact
+    * a data dictionary
+
+  The explicit key "data-dictionary" avoids collisions with object,
+  map, and vocabulary terminology.
+
+
+=== Recommended Contents ===
+
+  The contents of "data-dictionary" are intentionally open. Tools
+  should preserve unrecognized keys.
+
+  The following keys are recommended when relevant.
+
+  Ownership and location:
+
+    "owned_by"
+      The conceptual owner of the data.
+
+    "owner"
+      A higher-level owner or responsible subsystem.
+
+    "source_module"
+      The source module or file where the data is defined, stored, or
+      primarily managed.
+
+    "source_file"
+      A concrete source file path, if useful.
+
+  Creation and mutation:
+
+    "created_by"
+      The function, process, or event that creates the value.
+
+    "updated_by"
+      Functions, processes, or events that may mutate the value.
+
+    "cleared_by"
+      Functions or lifecycle events that remove or clear the value.
+
+    "set_by"
+      A lighter-weight field for listing writers when the distinction
+      between creation and update is not important.
+
+  Reading and usage:
+
+    "read_by"
+      Functions, modules, tools, or subsystems that read the value.
+
+    "used_by"
+      Subsystems or workflows that use the value.
+
+    "used_for"
+      A plain-language statement of purpose.
+
+    "primary_audience"
+      The intended readers of this documentation.
+
+  Lifecycle:
+
+    "lifecycle"
+      A plain-language explanation of how the data comes into
+      existence, changes, and disappears.
+
+    "reset_behavior"
+      What happens during reset or reinitialization.
+
+    "reset_policy"
+      A broader policy for reset behavior.
+
+    "identity_policy"
+      Whether the container or object identity is preserved, replaced,
+      or irrelevant.
+
+    "persistence"
+      Whether the value is runtime-only, persisted, exported, cached,
+      or reconstructed.
+
+  Runtime and serialization boundaries:
+
+    "runtime_only"
+      Whether the value belongs only to the live runtime and should not
+      be treated as semantic or persistent state.
+
+    "export_behavior"
+      How the value should appear, or not appear, in serialized,
+      debug, or exported forms.
+
+    "debug_visibility"
+      Whether and how the value appears in debug views.
+
+  Invariants and rules:
+
+    "invariants"
+      Important conditions that should remain true while the system is
+      running.
+
+    "rules"
+      Operational or interpretive rules.
+
+    "failure_modes"
+      Known ways the data can become invalid, stale, or dangerous.
+
+
+=== Boundary with SoftSpec Fields ===
+
+  The "data-dictionary" annotation should not replace ordinary SoftSpec
+  fields.
+
+  Use normal SoftSpec fields for structural, semantic, and
+  representational description:
+
+{
+  "type": "string",
+  "semantic_type": "window-id",
+  "description": "Unique runtime identifier for a live window.",
+  "required": true,
+  "nullable": false,
+  "json_clean": true,
+  "examples": ["window-1"]
+}
+
+  Use "data-dictionary" for operational and system-role description:
+
+{
+  "data-dictionary": {
+    "owned_by": "app.windows",
+    "created_by": "realize_window()",
+    "cleared_by": "reset_app()",
+    "lifecycle": "Created when the window is realized; cleared during reset.",
+    "runtime_only": false,
+    "export_behavior": "Include as a string in debug and semantic exports."
+  }
+}
+
+  A simple rule:
+
+    SoftSpec answers: What is this data?
+
+    Data-dictionary annotations answer: How does this data live in the
+    system?
+
+  More specifically:
+
+    If a field describes the value's type, meaning, or representability,
+    keep it directly on the SoftSpec definition.
+
+    If a field describes how the system treats the value, put it under
+    "data-dictionary".
+
+  Using that rule:
+
+    "json_clean" is usually a SoftSpec field or extension field.
+
+    "runtime_only" is usually a data-dictionary field.
+
+    "export_behavior" is usually a data-dictionary field.
+
+    "debug_visibility" is usually a data-dictionary field.
+
+    "persistence" is usually a data-dictionary field, unless a project
+    deliberately promotes it into a formal SoftSpec concept.
+
+
+=== Corrected Example ===
+
+  Preferred:
+
+{
+  "root": {
+    "type": ["tkinter.Tk", "null"],
+    "semantic_type": "hidden-tk-root",
+    "required": true,
+    "description": "The hidden Tk root that anchors the Tk interpreter, event loop, after scheduling, and clipboard access.",
+    "json_clean": false,
+
+    "data-dictionary": {
+      "owned_by": "app.g",
+      "created_by": "ensure_root()",
+      "cleared_by": ["reset_app()", "shutdown()"],
+      "lifecycle": "Created lazily when needed; destroyed during reset or shutdown.",
+      "runtime_only": true,
+      "export_behavior": "Do not serialize. Represent only by a debug summary if needed.",
+      "debug_visibility": "May appear in debug snapshots only as a readable summary."
+    }
+  }
+}
+
+  Not preferred:
+
+{
+  "root": {
+    "type": ["tkinter.Tk", "null"],
+    "semantic_type": "hidden-tk-root",
+    "required": true,
+    "description": "The hidden Tk root that anchors the Tk interpreter, event loop, after scheduling, and clipboard access.",
+
+    "data-dictionary": {
+      "json_clean": false,
+      "owned_by": "app.g",
+      "created_by": "ensure_root()",
+      "cleared_by": ["reset_app()", "shutdown()"],
+      "lifecycle": "Created lazily when needed; destroyed during reset or shutdown.",
+      "runtime_only": true,
+      "export_behavior": "Do not serialize. Represent only by a debug summary if needed."
+    }
+  }
+}
+
+  The second example is not preferred because "json_clean" is buried
+  inside "data-dictionary", even though it describes the value's
+  representability rather than its operational life.
+
+
+=== Advisory Nature ===
+
+  The "data-dictionary" annotation is descriptive and advisory by
+  default.
+
+  Tools should preserve it, display it, and may use it to assist humans
+  or LLMs.
+
+  Tools should not require it to be present.
+
+  Tools should not reject unfamiliar keys inside it.
+
+  Tools should not treat its contents as hard validation rules unless a
+  project-specific convention or separate tool explicitly chooses to do
+  so.
+
+  The purpose of "data-dictionary" is to support understanding,
+  maintenance, documentation, and gradual refinement, not to impose
+  rigid enforcement.
+
+
+== Types Section Example ==
+date: 2026-06-29
+
+{
+  "types": {
+    "uuid": {
+      "type": "string",
+      "semantic_type": "uuid",
+      "description": "A globally unique identifier for an entity",
+      "examples": [
+        "550e8400-e29b-41d4-a716-446655440000"
+      ],
+      "notes": [
+        "Typically a v4 random UUID, but conceivably a v5 systematic UUID."
+      ],
+      "rfc": "RFC-9562"
+    },
+
+    "tag_uri": {
+      "type": "string",
+      "semantic_type": "tag_uri",
+      "description": "A Tag URI identifier",
+      "examples": [
+        "tag:lionkimbro@gmail.com,2026-04-13:soft-schema"
+      ],
+      "rfc": "RFC-4151"
+    },
+
+    "entity_id": {
+      "type": ["uuid", "tag_uri"],
+      "notes": [
+        "It can be either a UUID or a Tag URI, but it must be one, and it must never change after initial assignment."
+      ]
+    }
+  }
+}
+
+
+== Minimal SoftSpec with Data-Dictionary Example ==
+date: 2026-06-29
+
+{
+  "softspec": {
+    "schemas": {
+      "window-record": {
+        "title": "Window Record",
+        "description": "Live runtime record for one TkVillage window.",
+
+        "structure": {
+          "type": "object",
+          "keys": {
+            "window_id": {
+              "type": "string",
+              "semantic_type": "window-id",
+              "required": true,
+              "description": "Unique runtime identifier for this window.",
+              "json_clean": true,
+
+              "data-dictionary": {
+                "owned_by": "app.windows",
+                "created_by": "realize_window()",
+                "cleared_by": "reset_app()",
+                "lifecycle": "Exists while the live window record exists.",
+                "runtime_only": false
+              }
+            },
+
+            "toplevel": {
+              "type": "tkinter.Toplevel",
+              "required": true,
+              "description": "Live Tk toplevel object for the window.",
+              "json_clean": false,
+
+              "data-dictionary": {
+                "owned_by": "app.windows",
+                "created_by": "realize_window()",
+                "cleared_by": "reset_app()",
+                "lifecycle": "Created when the window is realized; destroyed when the window is closed or runtime shuts down.",
+                "runtime_only": true,
+                "export_behavior": "Do not serialize. Represent only by debug label or object summary."
+              }
+            }
+          },
+          "additional_keys": true
+        }
+      }
+    }
+  }
+}
+
+
+== Tooling: Be Permissive ==
+date: 2026-06-29
+
+  Tools that read or process SoftSpec documents should be permissive in
+  what they accept.
+
+  Variations in naming are common and expected. For example, "str" and
+  "string", or "int" and "integer", should be treated as equivalent
+  where the meaning is clear. When meaning is unclear, tools may request
+  clarification, but should not fail unnecessarily.
+
+  The goal is to support communication and understanding, not to enforce
+  rigid syntax.
+
+
+== Tooling: Dealing with the Unknown ==
+date: 2026-06-29
+
+  If a "type" value is not recognized as a named type or standard
+  logical type, it should be treated as free-form and interpretive.
+
+  Tools should treat such values as opaque and non-actionable, but may
+  flag them for human review.
+
+    If structured: tools can act.
+    If interpretive: tools step back.
+
+  Conformity is not required. The more structure you provide, the more
+  tools can assist. Non-conformant content is preserved, not rejected.
+
+
+== Tooling: Data-Dictionary Annotations ==
+date: 2026-06-29
+
+  Tools that process SoftSpec documents should treat "data-dictionary"
+  as an optional annotation.
+
+  Tools may:
+
+    * preserve it unchanged
+    * display it in documentation views
+    * use it to generate data-dictionary reports
+    * use it to infer ownership, lifecycle, and serialization boundaries
+    * use it to warn about runtime-only values appearing in semantic state
+    * use it to identify likely tests or debug checks
+
+  Tools should not require "data-dictionary" to be present.
+
+  Tools should not reject unrecognized keys inside "data-dictionary".
+
+  Tools should not treat data-dictionary annotations as hard validation
+  rules unless a separate tool or project convention explicitly says to
+  do so.
+
+  Tools should keep the corrected boundary in mind:
+
+    SoftSpec fields describe what the value is.
+
+    Data-dictionary annotations describe how the system owns, creates,
+    mutates, clears, exports, debugs, or otherwise treats the value.
+
+
+== Tooling Possibilities ==
+date: 2026-06-29
+author: Wing-Cat (Chat-GPT), from Lion's inspiration
+
+  This specification is designed to support tooling that assists in the
+  gradual refinement of structure, rather than requiring it to be fully
+  defined from the outset.
+
+  One envisioned tool is a structured editor, like a JSON editor, but
+  able to interpret partially defined or free-form entries. A user could
+  type "x,y coordinates here as a list of tuples or dictionaries, not
+  sure which", and the tool could consult an LLM to propose several
+  structured interpretations. The user picks one as a starting point and
+  refines from there.
+
+  This supports a workflow of:
+
+    * initial expression, possibly vague or incomplete
+    * assisted interpretation
+    * optional commitment to structure
+
+  Importantly, this process is never required. Interpretive descriptions
+  remain valid indefinitely, and tools must not require them to be
+  resolved into structured forms.
+
+  Another capability is named type extraction. When a structure appears
+  repeatedly, a tool may offer to "make this a named type", promoting it
+  into the "types" section and replacing inline definitions with
+  references. A shared type vocabulary can emerge naturally over time,
+  rather than being predefined.
+
+  Tools may also support partial structuring, keeping an interpretive
+  description alongside a structured candidate, so users can compare or
+  defer decisions without losing original intent.
+
+  Data-dictionary annotations open a related path for tooling. A tool
+  may help extract ownership, lifecycle, reset behavior, serialization
+  boundaries, or debug visibility from source code and attach that
+  information to the relevant SoftSpec definitions.
+
+  In all cases, tooling should respect the core principle: assist,
+  suggest, and organize, but never enforce unless a separate project
+  convention explicitly asks for enforcement. The goal is to support
+  human and LLM reasoning, not to constrain it.
+
+
+== Summary ==
+date: 2026-06-29
+
+  SoftSpec provides structural, semantic, and representational
+  description of data.
+
+  The optional "data-dictionary" annotation provides operational
+  documentation about how that data lives inside a real system.
+
+  This lets SoftSpec documents serve as data dictionaries without
+  collapsing every documentation concern into the schema language itself.
+
+  The resulting model is layered:
+
+    * document wrapper: identity, purpose, authorship, status
+    * SoftSpec: types, schemas, structures, keys, arrays, mappings
+    * SoftSpec extension fields: representation and other value-level detail
+    * data-dictionary annotations: ownership, lifecycle, usage, mutation,
+      reset behavior, runtime boundaries, serialization behavior, and
+      operational rules
+
+  This keeps SoftSpec flexible while giving operational data dictionary
+  information a clear home inside the format.

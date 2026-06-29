@@ -1,0 +1,201 @@
+documentid: softspec.addendum.data-dictionary.correction.v1
+title: Correction Addendum: Distinguishing Data-Dictionary Annotations from SoftSpec Extension Fields
+date: 2026-06-29
+author: Lion Kimbro
+coauthor: Wing-Cat
+purpose: Clarify the boundary between SoftSpec extension fields and `data-dictionary` annotations, especially for representational and operational metadata.
+status: draft; correction to softspec.addendum.data-dictionary.v1
+
+== Correction Notice ==
+
+The previous addendum introduced the optional `data-dictionary` annotation for documenting ownership, lifecycle, usage, mutation, and operational meaning.
+
+That direction is correct.
+
+However, some of the examples placed fields such as `json_clean`, `runtime_only`, and `export_behavior` together inside `data-dictionary`.
+
+This should be clarified.
+
+These fields are not all the same kind of information.
+
+`json_clean` describes whether the value is cleanly representable as JSON. This is best understood as a SoftSpec extension field, because it describes the value’s representational character.
+
+`runtime_only` and `export_behavior` are more operational. They describe how the system treats the value: whether it belongs only to the live runtime, and what should happen to it during export, serialization, or debug reporting. These are usually better treated as data-dictionary annotations.
+
+The corrected distinction is:
+
+SoftSpec describes the value.
+
+`data-dictionary` describes how the value lives in the system.
+
+== Corrected Distinction ==
+
+SoftSpec fields and SoftSpec extension fields describe the value itself: its type, meaning, representation, and structural expectations.
+
+Examples include:
+
+* `type`
+* `logical_type`
+* `semantic_type`
+* `description`
+* `required`
+* `nullable`
+* `constraints`
+* `examples`
+* `json_clean`
+
+`json_clean` belongs in this group because it answers:
+
+“Can this value be represented cleanly as JSON?”
+
+That is a property of the value’s representation.
+
+Data-dictionary annotations describe the value’s operational role inside a living system.
+
+Examples include:
+
+* `owned_by`
+* `source_module`
+* `source_file`
+* `created_by`
+* `updated_by`
+* `cleared_by`
+* `read_by`
+* `used_for`
+* `lifecycle`
+* `reset_behavior`
+* `identity_policy`
+* `runtime_only`
+* `export_behavior`
+* `debug_visibility`
+* `persistence`
+* `invariants`
+* `failure_modes`
+
+These fields answer questions such as:
+
+* Who owns this value?
+* Who creates it?
+* Who changes it?
+* When is it cleared?
+* Is it part of live runtime state only?
+* How should tools treat it during export?
+* How should it appear in debug output?
+
+== Borderline Fields ==
+
+Some fields sit near the boundary between representation and operation.
+
+The recommended rule is:
+
+If a field describes the value’s type, meaning, or representability, keep it directly on the SoftSpec definition.
+
+If a field describes how the system treats the value, put it under `data-dictionary`.
+
+Using that rule:
+
+`json_clean` is usually a SoftSpec extension field.
+
+`runtime_only` is usually a data-dictionary field.
+
+`export_behavior` is usually a data-dictionary field.
+
+`debug_visibility` is usually a data-dictionary field.
+
+`persistence` is usually a data-dictionary field, unless a project deliberately promotes it into a formal SoftSpec concept.
+
+== Corrected Example ==
+
+Preferred:
+
+{
+"root": {
+"type": ["tkinter.Tk", "null"],
+"semantic_type": "hidden-tk-root",
+"required": true,
+"description": "The hidden Tk root that anchors the Tk interpreter, event loop, after scheduling, and clipboard access.",
+"json_clean": false,
+
+```
+"data-dictionary": {
+  "owned_by": "app.g",
+  "created_by": "ensure_root()",
+  "cleared_by": ["reset_app()", "shutdown()"],
+  "lifecycle": "Created lazily when needed; destroyed during reset or shutdown.",
+  "runtime_only": true,
+  "export_behavior": "Do not serialize. Represent only by a debug summary if needed.",
+  "debug_visibility": "May appear in debug snapshots only as a readable summary."
+}
+```
+
+}
+}
+
+Not preferred:
+
+{
+"root": {
+"type": ["tkinter.Tk", "null"],
+"semantic_type": "hidden-tk-root",
+"required": true,
+"description": "The hidden Tk root that anchors the Tk interpreter, event loop, after scheduling, and clipboard access.",
+
+```
+"data-dictionary": {
+  "json_clean": false,
+  "owned_by": "app.g",
+  "created_by": "ensure_root()",
+  "cleared_by": ["reset_app()", "shutdown()"],
+  "lifecycle": "Created lazily when needed; destroyed during reset or shutdown.",
+  "runtime_only": true,
+  "export_behavior": "Do not serialize. Represent only by a debug summary if needed."
+}
+```
+
+}
+}
+
+The second example is not preferred because `json_clean` is buried inside `data-dictionary`, even though it describes the value’s representability rather than its operational life.
+
+== Guidance for the Third Pass ==
+
+When incorporating `data-dictionary` into the third pass of SoftSpec, it should be framed as an optional annotation object for operational documentation.
+
+It should not become a dumping ground for every project-specific or nonstandard field.
+
+The recommended rule is:
+
+SoftSpec fields describe what the value is.
+
+Data-dictionary annotations describe how the system owns, creates, mutates, clears, exports, debugs, or otherwise treats the value.
+
+This keeps the format clean:
+
+* SoftSpec remains the place for structural, semantic, and representational description.
+* `data-dictionary` becomes the place for operational and documentary context.
+
+== Advisory Nature ==
+
+The `data-dictionary` annotation is descriptive and advisory by default.
+
+Tools should preserve it, display it, and may use it to assist humans or LLMs.
+
+Tools should not require it to be present.
+
+Tools should not reject unfamiliar keys inside it.
+
+Tools should not treat its contents as hard validation rules unless a project-specific convention or separate tool explicitly chooses to do so.
+
+The purpose of `data-dictionary` is to support understanding, maintenance, documentation, and gradual refinement — not to impose rigid enforcement.
+
+== Summary ==
+
+The original addendum should be read with this correction:
+
+`data-dictionary` is for operational documentation.
+
+`json_clean` is better treated as an ordinary SoftSpec extension field, because it describes the value’s representational status.
+
+`runtime_only`, `export_behavior`, `debug_visibility`, and similar fields are usually better treated as data-dictionary annotations, because they describe how the system treats the value in practice.
+
+This distinction should be incorporated into the third pass of the SoftSpec specification.

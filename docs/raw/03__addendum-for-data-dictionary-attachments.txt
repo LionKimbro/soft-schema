@@ -1,0 +1,533 @@
+documentid: softspec.addendum.data-dictionary.v1
+title: SoftSpec Addendum: Data-Dictionary Annotations
+date: 2026-06-29
+author: Lion Kimbro
+coauthor: Wing-Cat
+purpose: Define how SoftSpec documents may include data-dictionary annotations describing ownership, lifecycle, usage, and operational meaning beyond structural schema.
+status: draft; intended input for SoftSpec third pass
+
+== Introduction ==
+
+SoftSpec describes data structures in a flexible, human-readable, LLM-readable way. Its core concern is the shape and meaning of data: what kind of value appears here, what fields it may contain, what examples clarify it, and what interpretive or structural constraints are known.
+
+However, many real data documents need to say more than this. They need to explain not only what a value is, but how it lives inside a system.
+
+A field may be created by one function, updated by another, cleared during reset, exposed in debug snapshots, excluded from JSON export, owned by a particular module, or treated as runtime-only despite appearing inside a documented structure.
+
+This addendum introduces the optional `data-dictionary` annotation for this purpose.
+
+The name is intentionally explicit. The word "dictionary" is overloaded in JSON and programming contexts: it may mean a JSON object, a Python dictionary, a map-like structure, a vocabulary, or a documentation artifact. To avoid confusion, SoftSpec documents should use the key `data-dictionary` when attaching data-dictionary information to a type, schema, object, field, or record.
+
+== Core Idea ==
+
+SoftSpec describes structure.
+
+A data dictionary describes the role of data within a living system.
+
+These are related but not identical.
+
+A SoftSpec definition may say:
+
+{
+"type": "string",
+"semantic_type": "window-id",
+"description": "Unique runtime identifier for a live window."
+}
+
+A data-dictionary annotation may additionally say:
+
+{
+"owned_by": "app.windows",
+"created_by": "realize_window()",
+"cleared_by": "reset_app()",
+"used_by": ["event routing", "debug snapshot"],
+"lifecycle": "Created when a window is realized; removed when runtime state is reset."
+}
+
+The first describes the value as data.
+
+The second describes the value as part of a system.
+
+Both forms are useful. SoftSpec should allow them to live together without forcing operational documentation into structural fields such as `type`, `description`, or `constraints`.
+
+== Placement ==
+
+The `data-dictionary` annotation may appear anywhere a SoftSpec definition appears.
+
+It may be attached to:
+
+* a named type
+* a named schema
+* an object structure
+* an individual field under `keys`
+* a mapped structure
+* an array
+* a record type
+* a top-level SoftSpec document
+
+Example field-level use:
+
+{
+"window_id": {
+"type": "string",
+"semantic_type": "window-id",
+"required": true,
+"description": "Unique runtime identifier for a live window.",
+
+```
+"data-dictionary": {
+  "owned_by": "app.windows",
+  "created_by": "realize_window()",
+  "cleared_by": "reset_app()",
+  "lifecycle": "Exists while the window record exists.",
+  "json_clean": true
+}
+```
+
+}
+}
+
+Example schema-level use:
+
+{
+"schemas": {
+"app-module-runtime-state": {
+"title": "app.py Runtime State",
+"description": "The full runtime data surface owned by src/tkvillage/app.py.",
+
+```
+  "data-dictionary": {
+    "source_module": "src/tkvillage/app.py",
+    "owner": "TkVillage runtime kernel",
+    "reset_policy": "Container identities are preserved across reset_app() by clearing and updating existing containers.",
+    "primary_audience": ["human maintainer", "LLM coding assistant", "debug tooling"]
+  },
+
+  "structure": {
+    "type": "object",
+    "keys": {}
+  }
+}
+```
+
+}
+}
+
+== Recommended Contents ==
+
+The contents of `data-dictionary` are intentionally open. Tools should preserve unrecognized keys.
+
+The following keys are recommended when relevant.
+
+=== Ownership and Location ===
+
+`owned_by`
+
+The conceptual owner of the data.
+
+Examples:
+
+{
+"owned_by": "app.windows"
+}
+
+{
+"owned_by": "config.py"
+}
+
+`source_module`
+
+The source module or file where the data is defined, stored, or primarily managed.
+
+Examples:
+
+{
+"source_module": "src/tkvillage/app.py"
+}
+
+`source_file`
+
+A concrete source file path, if useful.
+
+Examples:
+
+{
+"source_file": "C:/lion/github/tkvillage/src/tkvillage/app.py"
+}
+
+=== Creation and Mutation ===
+
+`created_by`
+
+The function, process, or event that creates the value.
+
+Examples:
+
+{
+"created_by": "realize_window()"
+}
+
+`updated_by`
+
+Functions, processes, or events that may mutate the value.
+
+Examples:
+
+{
+"updated_by": ["post_event()", "tick_once()", "project_window()"]
+}
+
+`cleared_by`
+
+Functions or lifecycle events that remove or clear the value.
+
+Examples:
+
+{
+"cleared_by": "reset_app()"
+}
+
+`set_by`
+
+A lighter-weight field for listing writers when the distinction between creation and update is not important.
+
+Examples:
+
+{
+"set_by": ["reset_app()", "set_runtime_identity()"]
+}
+
+=== Reading and Usage ===
+
+`read_by`
+
+Functions, modules, tools, or subsystems that read the value.
+
+Examples:
+
+{
+"read_by": ["debug snapshots", "event routing", "effect routing"]
+}
+
+`used_for`
+
+A plain-language statement of purpose.
+
+Examples:
+
+{
+"used_for": "Lookup from summon instance_key to live window_id."
+}
+
+`primary_audience`
+
+The intended readers of this documentation.
+
+Examples:
+
+{
+"primary_audience": ["human maintainer", "LLM coding assistant"]
+}
+
+=== Lifecycle ===
+
+`lifecycle`
+
+A plain-language explanation of how the data comes into existence, changes, and disappears.
+
+Examples:
+
+{
+"lifecycle": "Created when a window is realized; cleared during reset_app()."
+}
+
+`reset_behavior`
+
+What happens during reset or reinitialization.
+
+Examples:
+
+{
+"reset_behavior": "Preserve dictionary identity; remove all entries with clear()."
+}
+
+`identity_policy`
+
+Whether the container or object identity is preserved, replaced, or irrelevant.
+
+Examples:
+
+{
+"identity_policy": "Preserve identity across reset_app() with clear() and update()."
+}
+
+`persistence`
+
+Whether the value is runtime-only, persisted, exported, cached, or reconstructed.
+
+Examples:
+
+{
+"persistence": "runtime-only"
+}
+
+=== Runtime and Serialization Boundaries ===
+
+`json_clean`
+
+Whether the value is cleanly representable as JSON.
+
+Suggested values:
+
+* `true`
+* `false`
+* `"mostly"`
+* `"mixed"`
+
+Examples:
+
+{
+"json_clean": false
+}
+
+{
+"json_clean": "mostly"
+}
+
+`runtime_only`
+
+Whether the value belongs only to the live runtime and should not be treated as semantic or persistent state.
+
+Examples:
+
+{
+"runtime_only": true
+}
+
+`export_behavior`
+
+How the value should appear, or not appear, in serialized/debug/exported forms.
+
+Examples:
+
+{
+"export_behavior": "Convert pathlib.Path values to strings."
+}
+
+{
+"export_behavior": "Omit live tkinter objects from semantic exports."
+}
+
+`debug_visibility`
+
+Whether and how the value appears in debug views.
+
+Examples:
+
+{
+"debug_visibility": "Included in debug snapshots after conversion to a readable representation."
+}
+
+=== Invariants and Rules ===
+
+`invariants`
+
+Important conditions that should remain true while the system is running.
+
+Examples:
+
+{
+"invariants": [
+"Each live window_id appears at most once in windows.",
+"windows_by_instance_key values must refer to existing keys in windows."
+]
+}
+
+`rules`
+
+Operational or interpretive rules.
+
+Examples:
+
+{
+"rules": [
+"Reducer-owned state should stay JSON-clean where practical.",
+"Runtime-only Python objects should not be inserted into reducer-owned semantic state."
+]
+}
+
+`failure_modes`
+
+Known ways the data can become invalid, stale, or dangerous.
+
+Examples:
+
+{
+"failure_modes": [
+"A stale window_id may remain if a window is destroyed without unregistering it."
+]
+}
+
+== Relationship to SoftSpec Fields ==
+
+The `data-dictionary` annotation should not replace ordinary SoftSpec fields.
+
+Use normal SoftSpec fields for structural and semantic description:
+
+{
+"type": "string",
+"semantic_type": "window-id",
+"description": "Unique runtime identifier for a live window.",
+"required": true,
+"nullable": false,
+"examples": ["window-1"]
+}
+
+Use `data-dictionary` for operational and system-role description:
+
+{
+"data-dictionary": {
+"owned_by": "app.windows",
+"created_by": "realize_window()",
+"cleared_by": "reset_app()",
+"lifecycle": "Created when the window is realized; cleared during reset.",
+"json_clean": true
+}
+}
+
+A simple rule:
+
+SoftSpec answers: “What is this data?”
+
+Data-dictionary annotations answer: “How does this data live in the system?”
+
+== Avoiding the Word Dictionary Alone ==
+
+SoftSpec documents should avoid using a bare key named `dictionary` for this feature.
+
+The word is too overloaded.
+
+In JSON and programming documentation, “dictionary” may mean:
+
+* a JSON object
+* a Python dict
+* a map-like data structure
+* a vocabulary or glossary
+* a documentation artifact
+* a data dictionary
+
+For this reason, the recommended key is:
+
+{
+"data-dictionary": {}
+}
+
+This makes the documentation role explicit and avoids collisions with object/map terminology.
+
+== Tooling Guidance ==
+
+Tools that process SoftSpec documents should treat `data-dictionary` as an optional annotation.
+
+Tools may:
+
+* preserve it unchanged
+* display it in documentation views
+* use it to generate data-dictionary reports
+* use it to infer ownership, lifecycle, and serialization boundaries
+* use it to warn about runtime-only values appearing in semantic state
+* use it to identify likely tests or debug checks
+
+Tools should not require `data-dictionary` to be present.
+
+Tools should not reject unrecognized keys inside `data-dictionary`.
+
+Tools should not treat data-dictionary annotations as hard validation rules unless a separate tool or project convention explicitly says to do so.
+
+== Suggested SoftSpec Third-Pass Integration ==
+
+The third pass of the SoftSpec specification should include `data-dictionary` as a recognized optional annotation field.
+
+It should be introduced after the core type-description fields, because it is not part of the minimal structural definition system.
+
+A good location would be after “Expressing: Detail” or after “Expressing: Objects,” with a new section titled:
+
+== Expressing: Data-Dictionary Annotations ==
+
+That section should explain:
+
+* SoftSpec describes structure and meaning.
+* Data-dictionary annotations describe operational role.
+* The key should be named `data-dictionary`, not `dictionary`.
+* The contents are open and project-extensible.
+* Common fields include ownership, lifecycle, creation, mutation, usage, reset behavior, JSON cleanliness, runtime-only status, export behavior, debug visibility, invariants, and rules.
+* Tools should preserve unknown fields and treat the annotation as descriptive unless otherwise specified.
+
+== Minimal Example ==
+
+{
+"softspec": {
+"schemas": {
+"window-record": {
+"title": "Window Record",
+"description": "Live runtime record for one TkVillage window.",
+
+```
+    "structure": {
+      "type": "object",
+      "keys": {
+        "window_id": {
+          "type": "string",
+          "semantic_type": "window-id",
+          "required": true,
+          "description": "Unique runtime identifier for this window.",
+
+          "data-dictionary": {
+            "owned_by": "app.windows",
+            "created_by": "realize_window()",
+            "cleared_by": "reset_app()",
+            "lifecycle": "Exists while the live window record exists.",
+            "json_clean": true,
+            "runtime_only": false
+          }
+        },
+
+        "toplevel": {
+          "type": "tkinter.Toplevel",
+          "required": true,
+          "description": "Live Tk toplevel object for the window.",
+
+          "data-dictionary": {
+            "owned_by": "app.windows",
+            "created_by": "realize_window()",
+            "cleared_by": "reset_app()",
+            "lifecycle": "Created when the window is realized; destroyed when the window is closed or runtime shuts down.",
+            "json_clean": false,
+            "runtime_only": true,
+            "export_behavior": "Do not serialize. Represent only by debug label or object summary."
+          }
+        }
+      },
+      "additional_keys": true
+    }
+  }
+}
+```
+
+}
+}
+
+== Summary ==
+
+SoftSpec provides the structural and semantic description of data.
+
+The optional `data-dictionary` annotation provides operational documentation about how that data lives inside a real system.
+
+This lets SoftSpec documents serve as data dictionaries without collapsing every documentation concern into the schema language itself.
+
+The result is a useful layered model:
+
+* document wrapper: identity, purpose, authorship, status
+* SoftSpec: types, schemas, structures, keys, arrays, mappings
+* data-dictionary annotations: ownership, lifecycle, usage, mutation, reset behavior, runtime boundaries, serialization behavior, and operational rules
+
+This keeps SoftSpec flexible while giving data dictionaries a clear home inside the format.
