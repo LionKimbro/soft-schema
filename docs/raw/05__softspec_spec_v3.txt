@@ -1,6 +1,7 @@
 documentid: softspec.spec.v3
 title: SoftSpec Specification (v3)
 date: 2026-06-29
+updated: 2026-07-22
 author: Lion Kimbro
 coauthor: Wing-Cat (Chat-GPT), Claude Code
 purpose: Define the SoftSpec schema language, including flexible structural description and optional data-dictionary annotations.
@@ -452,6 +453,31 @@ date: 2026-06-29
 }
 
 
+- "const" ----------------------------------------
+
+    States that the value has one exact permitted value.
+
+    This is documented in its own section:
+    "Expressing: Exact Values".
+
+{
+  "type": "string",
+  "const": "completed"
+}
+
+- "discriminator" --------------------------------
+
+    States that the value has one exact permitted value,
+    which discriminates the data structure.
+
+    This is documented in its own section:
+    "Expressing: Discriminators".
+
+{
+  "type": "string",
+  "discriminator": "person"
+}
+
 - "constraints" ----------------------------------
 
     Describes expectations or limitations on acceptable values.
@@ -486,6 +512,143 @@ date: 2026-06-29
 
   Additional fields may be invented as needed. Unrecognized fields
   should be preserved and ignored by tools that do not understand them.
+
+
+== Expressing: Exact Values ==
+date: 2026-07-22
+
+The "const" field states that a value has one exact permitted value.
+
+{
+  "type": "string",
+  "const": "spark-capture"
+}
+
+Unlike an example or vocabulary entry, "const" is definitive. The
+described value must equal the value of "const".
+
+The constant may be any JSON value: string, number, boolean, null,
+array, or object.
+
+"const" describes the permitted value, while "required" describes
+whether an object key must be present.
+
+To require a key with an exact value, use both:
+
+{
+  "type": "string",
+  "const": "spark-capture",
+  "required": true
+}
+
+The "type" field may be omitted when it is evident from the constant:
+
+{
+  "const": "spark-capture",
+  "required": true
+}
+
+Tools may infer the JSON type from the constant value.
+
+As elsewhere in SoftSpec, the value of "const" may instead be
+descriptive or interpretive:
+
+{
+  "const": "<current version number for the package>"
+}
+
+In this example, the permitted value is not literally the string
+"<current version number for the package>".  The expression indicates
+that the package's current version number is to be substituted here,
+and that the substituted value is constant for the package.
+
+When a constant is descriptive or interpretive, tools should preserve
+its meaning rather than treating it automatically as a literal JSON
+value.
+
+"examples", "type", "logical_type", "description", or other fields
+may be used to clarify the intended constant.
+
+
+== Expressing: Discriminators ==
+date: 2026-07-22
+
+A discriminator is a field whose exact value identifies the kind of
+object being described.
+
+For example, a document may contain:
+
+{
+  "shape": "triangle",
+  "p1": [34, 34],
+  "p2": [59, 34],
+  "p3": [40, 60]
+}
+
+The soft-spec definition might look like:
+
+{
+  "type": "object",
+  "keys": {
+    "shape": {"discriminator": "triangle"},
+    "p1": {"ref": "coordinate"},
+    "p2": {"ref": "coordinate"},
+    "p3": {"ref": "coordinate"}
+  }
+}  
+
+When "discriminator" contains a value, it is shorthand for a constant
+discriminator definition.
+
+The definition above implies:
+
+{
+  "format": {
+    "type": "string",
+    "const": "spark-capture-v1",
+    "required": true,
+    "discriminator": true
+  }
+}
+
+Fields implied by discriminator shorthand act as defaults. An
+explicitly written field in the same definition overrides the implied
+default.
+
+For example:
+
+{
+  "format": {
+    "discriminator": "spark-capture-v1",
+    "required": false
+  }
+}
+
+is equivalent to:
+
+{
+  "format": {
+    "type": "string",
+    "const": "spark-capture-v1",
+    "required": false,
+    "discriminator": true
+  }
+}
+
+In the expanded form, "discriminator": true marks an existing constant
+definition as participating in schema identification.
+
+The two forms therefore have related but distinct meanings:
+
+```
+"discriminator": <value>
+  Compact form. Supplies the discriminator value and implies "const",
+  "required": true, "discriminator": true, and the value's JSON type.
+
+"discriminator": true
+  Expanded annotation. Marks a definition whose exact value is
+  described separately, normally using "const".
+```
 
 
 == Expressing: Constraints ==
@@ -661,6 +824,14 @@ date: 2026-06-29
   "type": "array",
   "description": "A list of coordinate values"
 }
+
+  Fixed positional arrays, or tuples, may be expressed by providing
+  an array of SoftSpec definitions:
+
+  "items": ["integer", "integer"]
+
+  Each definition describes the element at the corresponding position.
+  The number of deinitions impliest the exact tuple length.
 
 
 == Expressing: Vocabulary ==
