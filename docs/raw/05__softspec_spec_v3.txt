@@ -44,7 +44,6 @@ date: 2026-06-29
   * Principles
   * SoftSpec Schemas Live Within JSON Documents
   * Schemas and Types
-  * Schemas Are Descriptions of Types
   * Schema Definition Structure
   * Variable Levels of Detail
   * Specific Forms
@@ -120,49 +119,36 @@ date: 2026-06-29
 
 == Schemas and Types ==
 date: 2026-06-29
+updated: 2026-07-22
 
-  SoftSpec uses a single definition structure to describe data.
+  SoftSpec uses a single definition language to describe data.
 
-  This structure is used throughout the system, including both entries
-  in the "types" section and entries in the "schemas" section.
+  This language is used both for named types and for the structures
+  described by schemas. Types and schemas are therefore closely related,
+  but serve different roles within a SoftSpec document.
 
-  In other words, types and schemas are expressed using the same
-  underlying form. The distinction between them is primarily one of role.
+  The "types" section defines named, reusable building blocks. These are
+  commonly smaller definitions, such as identifiers, dates, shared
+  records, or other structures used repeatedly throughout the document.
 
-  The "types" section defines named, frequently reused definitions.
-  These are typically small, composable building blocks.
+  The "schemas" section defines significant named structures. These
+  commonly represent complete, independently meaningful forms: records,
+  documents, messages, container formats, or other primary subjects of
+  the specification.
 
-  The "schemas" section defines named structures intended for direct
-  use. These often represent complete or externally meaningful forms.
+  A schema typically includes a "structure" field containing its
+  structural definition. It may also include descriptive fields such
+  as titles, notes, rules, and data-dictionary annotations. These
+  give the schema identity and context without changing the definition
+  of its structure.
 
-  In addition to the core definition structure, schema entries may
-  include descriptive fields such as titles, notes, and rules. These
-  provide context, identity, and guidance, but do not change the
-  underlying type structure.
+  Size alone does not determine whether something is a type or a schema.
+  The distinction is primarily one of role: types form a shared
+  vocabulary of building blocks, while schemas identify structures that
+  are meaningful subjects in their own right.
 
-  Both ultimately rely on the same definition language described in
-  this document.
-
-
-== Schemas Are Descriptions of Types ==
-date: 2026-06-29
-
-  At its core, a SoftSpec schema is a description of types.
-
-  It describes what values may appear, what they mean, and how they are
-  used.
-
-  Types may be nested within one another. A schema may describe a value
-  directly, or it may describe a structure composed of other types.
-
-  These descriptions may be shallow or deeply detailed. They may be
-  fully specified, or partially described in natural language.
-
-  Types may also refer to other types by name, forming a graph of
-  reusable definitions.
-
-  Ultimately, a SoftSpec document is a description of types and their
-  relationships.
+  Because both use the same definition language, either may participate
+  in larger structures and may be referenced from other definitions.
 
 
 == Schema Definition Structure ==
@@ -252,8 +238,9 @@ date: 2026-06-29
 
 == Expressing: References ==
 date: 2026-06-29
+updated: 2026-07-22
 
-  Defined types may be referenced by name:
+  Named types and schemas may be referenced by name:
 
     "entity-id"
 
@@ -261,8 +248,14 @@ date: 2026-06-29
 
     {"ref": "entity-id"}
 
-  This allows commonly used structures to be defined once and reused
-  throughout the document.
+  When the name identifies a schema, the reference denotes that schema's
+  structural definition.
+
+  Names SHOULD be unambiguous among the definitions visible at
+  a reference site.
+
+  References allow structures to be defined once and reused throughout
+  the document.
 
 
 == Expressing: Detail ==
